@@ -1,0 +1,24 @@
+# Runtime dependencies for the API container only (see Dockerfile).
+# UI (streamlit) and eval (ragas, datasets) deps are intentionally excluded to
+# keep the image lean. Keep versions in sync with requirements.txt.
+
+# Core
+pydantic>=2.6
+pydantic-settings>=2.2
+python-dotenv>=1.0
+numpy>=1.26
+tiktoken>=0.7
+openai>=1.30
+
+# Document loading
+pypdf>=4.2
+beautifulsoup4>=4.12
+
+# API
+fastapi>=0.111
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9   # required: /upload uses multipart/form-data
+
+# Production vector backend
+psycopg[binary]>=3.1
+pgvector>=0.2.5

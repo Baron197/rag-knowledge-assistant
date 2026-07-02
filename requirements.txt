@@ -1,0 +1,32 @@
+# Core
+pydantic>=2.6
+pydantic-settings>=2.2
+python-dotenv>=1.0
+numpy>=1.26
+tiktoken>=0.7
+openai>=1.30
+
+# Document loading
+pypdf>=4.2
+beautifulsoup4>=4.12
+
+# API + UI
+fastapi>=0.111
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9   # parses multipart/form-data for file uploads (/upload)
+streamlit>=1.36
+requests>=2.31
+
+# Evaluation (optional at runtime; only needed for `make eval`)
+ragas>=0.1.9,<0.2
+datasets>=2.19
+
+# Production vector backend (optional; only needed for VECTOR_BACKEND=pgvector)
+psycopg[binary]>=3.1
+pgvector>=0.2.5
+
+# Dev / test
+pytest>=8.2
+
+# Lint
+ruff>=0.5

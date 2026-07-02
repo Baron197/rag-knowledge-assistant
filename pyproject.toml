@@ -1,0 +1,17 @@
+[project]
+name = "rag-knowledge-assistant"
+version = "0.3.0"
+description = "Production-style RAG service with hybrid retrieval, evaluation and observability."
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501", "UP017"]  # long lines; allow timezone.utc (3.10-compatible)
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]

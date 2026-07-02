@@ -1,0 +1,11 @@
+# Optional extras: free, local, NO-API-KEY models from Hugging Face.
+# Install with:  pip install -r requirements-hf.txt   (or: make install-hf)
+#
+# These are heavy (they pull in PyTorch) and are NOT needed for the default
+# keyless `fake` path, the test suite, or CI. Install them only when you set
+# LLM_PROVIDER=hf and/or EMBEDDING_PROVIDER=hf to run real open-source models on
+# your own machine.
+sentence-transformers>=3.0   # local embeddings (all-MiniLM-L6-v2 etc.)
+transformers>=4.44           # local text generation (Qwen2.5, Llama 3.2, ...)
+torch>=2.2                   # the deep-learning runtime
+accelerate>=0.33             # device placement / faster loading

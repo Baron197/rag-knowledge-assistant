@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.env
+
+# Data / indexes / traces (generated)
+data/index/
+traces/
+eval/results/
+*.npz
+
+# OS / editor / assistant
+.DS_Store
+.idea/
+.vscode/
+.claude/
+
+# pytest
+.pytest_cache/
+
+# ruff
+.ruff_cache/
