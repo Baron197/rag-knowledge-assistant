@@ -26,5 +26,6 @@ pages = [
     st.Page("views/chat.py", title="Ask", icon="💬", default=True),
     st.Page("views/analytics.py", title="Analytics", icon="📊"),
     st.Page("views/evaluation.py", title="Evaluation", icon="🎯"),
+    st.Page("views/guide.py", title="Guide", icon="📖"),
 ]
 st.navigation(pages).run()
