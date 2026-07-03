@@ -19,6 +19,7 @@ def _client(tmp_path, monkeypatch) -> TestClient:
     monkeypatch.setenv("TRACE_DIR", str(tmp_path / "traces"))
     monkeypatch.setenv("LLM_PROVIDER", "fake")
     monkeypatch.setenv("EMBEDDING_PROVIDER", "fake")
+    monkeypatch.setenv("VECTOR_BACKEND", "numpy")  # hermetic: ignore a dev .env
     (tmp_path / "docs").mkdir(parents=True, exist_ok=True)
     from src.rag import api
     importlib.reload(api)  # rebuild module-level app + singleton with the new env

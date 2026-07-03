@@ -1,0 +1,10 @@
+# Normalize text line endings in the repo; never touch binary files.
+* text=auto
+
+# Binaries: store verbatim, no line-ending conversion (would corrupt them).
+*.pdf  binary
+*.npy  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary

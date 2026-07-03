@@ -268,8 +268,13 @@ src/rag/
   observability.py  per-query traces, token cost, latency aggregation
   pipeline.py       retrieve -> prompt -> generate -> trace (+ LRU cache)
   ingest.py         load -> chunk -> embed -> store (CLI)
-  api.py            FastAPI: /health /ingest /upload /query /metrics
-ui/streamlit_app.py thin client over the API (ask, re-ingest, upload)
+  api.py            FastAPI: /health /ingest /upload /query /metrics /analytics /eval-results
+ui/
+  streamlit_app.py  multipage router (thin client over the API)
+  common.py         shared config, styling and API helpers
+  views/chat.py     grounded chat with citations + telemetry
+  views/analytics.py filterable charts over the query traces
+  views/evaluation.py read-only dashboard of the eval reports (retrieval + Ragas + A/B)
 eval/               golden set + A/B + Ragas harness + results
 tests/              end-to-end tests on the keyless path
 Dockerfile          containerised API

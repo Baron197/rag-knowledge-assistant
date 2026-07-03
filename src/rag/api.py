@@ -6,6 +6,8 @@ Endpoints:
   POST /upload    -> save uploaded file(s) into DOCS_DIR, then re-index them
   POST /query     -> grounded answer with citations, cost and latency
   GET  /metrics   -> aggregate cost/latency/throughput from traces
+  GET  /analytics -> per-query trace records for the analytics dashboard
+  GET  /eval-results -> evaluation reports (retrieval/Ragas/A-B) for the eval dashboard
 
 The pipeline is built once and reused, so the API is the single source of truth
 that both the Streamlit UI and the eval harness can call. Request bodies are
@@ -14,6 +16,7 @@ HTTP 500s instead of leaking stack traces.
 """
 from __future__ import annotations
 
+import json
 import logging
 import threading
 from pathlib import Path
@@ -210,3 +213,66 @@ def query(req: QueryRequest) -> QueryResponse:
 def metrics() -> dict:
     """Aggregate cost/latency/throughput across all recorded query traces."""
     return get_pipeline().tracer.aggregate()
+
+
+@app.get("/analytics")
+def analytics(limit: int = 2000) -> dict:
+    """Per-query trace records (most recent first bounded by `limit`) for the
+    analytics dashboard: timings, tokens, cost, contexts and sources per query.
+
+    Only uncached queries are traced (cache hits are intentionally not recorded),
+    so this reflects real retrieval/generation work — the same rows `/metrics`
+    aggregates, but unrolled so the client can filter and chart them.
+    """
+    limit = max(1, min(limit, 5000))
+    rows = get_pipeline().tracer.records(limit)
+    queries = [
+        {
+            "ts": r.get("ts"),
+            "question": r.get("question", ""),
+            "answer_preview": (r.get("answer", "") or "")[:240],
+            "timings_ms": r.get("timings_ms", {}),
+            "tokens": r.get("tokens", {}),
+            "cost_usd": r.get("cost_usd", 0.0),
+            "n_contexts": r.get("n_contexts", 0),
+            "sources": r.get("sources", []),
+        }
+        for r in rows
+    ]
+    return {"count": len(queries), "queries": queries}
+
+
+@app.get("/eval-results")
+def eval_results(limit: int = 50) -> dict:
+    """Evaluation reports written by the eval harness (from `eval_results_dir`),
+    for the Evaluation dashboard. Returns eval runs (retrieval metrics, optional
+    Ragas generation metrics on the OpenAI path, and per-question detail) and
+    vector-vs-hybrid A/B comparisons, newest first.
+
+    Read-only: reports are generated out-of-band by `python -m eval.run_eval`
+    (see the Makefile), not triggered from here.
+    """
+    limit = max(1, min(limit, 200))
+    results_dir = Path(get_settings().eval_results_dir)
+    evals: list[dict] = []
+    compares: list[dict] = []
+    if results_dir.exists():
+        # Filenames are timestamped (eval-YYYYMMDDT…), so a reverse name sort is
+        # newest-first. Bad/partial files are skipped rather than failing the call.
+        for path in sorted(results_dir.glob("*.json"), reverse=True):
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+            except (ValueError, OSError):
+                continue
+            if not isinstance(data, dict):
+                continue
+            data["_name"] = path.name
+            if path.name.startswith("compare-"):
+                compares.append(data)
+            elif path.name.startswith("eval-"):
+                evals.append(data)
+    return {
+        "results_dir": str(results_dir),
+        "eval_runs": evals[:limit],
+        "compare_runs": compares[:limit],
+    }

@@ -38,7 +38,9 @@ from src.rag.ingest import ingest  # noqa: E402
 from src.rag.pipeline import RAGPipeline  # noqa: E402
 
 GOLDEN = Path(__file__).parent / "golden_set.jsonl"      # the labelled question set
-RESULTS_DIR = Path(__file__).parent / "results"          # where reports are written
+# Single source of truth with the API's /eval-results reader (repo-anchored by
+# default; both honour EVAL_RESULTS_DIR).
+RESULTS_DIR = Path(get_settings().eval_results_dir)      # where reports are written
 REFUSAL_MARKER = "don't have enough information"          # substring that marks a refusal
 # Eval queries write their traces here (gitignored), not to the app's trace
 # file, so /metrics keeps reflecting real user traffic only.
@@ -274,6 +276,17 @@ def run_compare(rows: list[dict]) -> Path:
     ]
     out = RESULTS_DIR / f"compare-{stamp}.md"
     out.write_text("\n".join(lines) + "\n")
+    # Structured sibling so the Evaluation dashboard can chart the A/B directly.
+    (RESULTS_DIR / f"compare-{stamp}.json").write_text(
+        json.dumps(
+            {
+                "timestamp": stamp,
+                "providers": {"embedding": base.embedding_provider, "top_k": base.top_k},
+                "results": results,
+            },
+            indent=2,
+        )
+    )
     return out
 
 

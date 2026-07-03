@@ -1,0 +1,13 @@
+# Streamlit theme + server config for the RAG Knowledge Assistant UI.
+[theme]
+base = "light"
+primaryColor = "#4F46E5"
+backgroundColor = "#F7F8FA"
+secondaryBackgroundColor = "#F1F4F9"
+textColor = "#0F172A"
+font = "sans serif"
+
+[server]
+# Mirror the API's 50 MB/request cap so Streamlit rejects oversized uploads
+# gracefully (the per-file 10 MB check is enforced client-side in the app).
+maxUploadSize = 50

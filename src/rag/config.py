@@ -83,6 +83,11 @@ class Settings(BaseSettings):
     # --- Paths --------------------------------------------------------------
     docs_dir: Path = Path("data/docs")    # source documents to ingest
     trace_dir: Path = Path("traces")      # where per-query traces are written
+    # Where the eval harness writes reports and the /eval-results endpoint reads
+    # them. Anchored to the repo root (not the process CWD) so the reader (API,
+    # which may be launched from anywhere) and the writer (eval.run_eval) always
+    # agree on one absolute directory. Override with EVAL_RESULTS_DIR.
+    eval_results_dir: Path = Path(__file__).resolve().parents[2] / "eval" / "results"
 
 
 def get_settings() -> Settings:

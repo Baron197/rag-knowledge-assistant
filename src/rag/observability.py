@@ -90,18 +90,30 @@ class Tracer:
         with self._lock, self.path.open("a", encoding="utf-8") as f:
             f.write(line)
 
-    def aggregate(self) -> dict[str, Any]:
-        """Roll up all recorded traces into summary metrics for the /metrics endpoint."""
+    def _read_rows(self) -> list[dict[str, Any]]:
+        """Parse every trace line, skipping torn/partial lines rather than raising."""
         if not self.path.exists():
-            return {"queries": 0}
-        rows = []
+            return []
+        rows: list[dict[str, Any]] = []
         for line in self.path.read_text().splitlines():
             if not line.strip():
                 continue
             try:
                 rows.append(json.loads(line))
             except json.JSONDecodeError:
-                continue  # skip a torn/partial line rather than 500 the endpoint
+                continue  # a torn/partial line shouldn't 500 the endpoint
+        return rows
+
+    def records(self, limit: int | None = None) -> list[dict[str, Any]]:
+        """Return recorded traces (most recent `limit`, or all) for the analytics API."""
+        rows = self._read_rows()
+        if limit is not None and limit >= 0:
+            rows = rows[-limit:]
+        return rows
+
+    def aggregate(self) -> dict[str, Any]:
+        """Roll up all recorded traces into summary metrics for the /metrics endpoint."""
+        rows = self._read_rows()
         if not rows:
             return {"queries": 0}
         n = len(rows)

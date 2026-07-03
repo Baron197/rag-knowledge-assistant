@@ -16,6 +16,7 @@ uvicorn[standard]>=0.30
 python-multipart>=0.0.9   # parses multipart/form-data for file uploads (/upload)
 streamlit>=1.36
 requests>=2.31
+pandas>=2.0               # analytics dashboard (ships with streamlit; declared for the direct import)
 
 # Evaluation (optional at runtime; only needed for `make eval`)
 ragas>=0.1.9,<0.2
