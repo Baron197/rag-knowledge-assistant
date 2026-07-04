@@ -64,7 +64,7 @@ _LIGHT_VARS = """
 _DARK_VARS = """
 :root{
   --bg:#0E1420; --surface:#182234; --surface-2:#131C2B; --sidebar-bg:#0B111C; --border:#2A3852;
-  --ink:#EAF0F9; --body:#A9B6CA; --muted:#6E7C93; --primary:#8E97FF;
+  --ink:#EAF0F9; --body:#A9B6CA; --muted:#8B98AE; --primary:#8E97FF;
   --cite-bg:#2A2F5C; --success:#34D399; --success-bg:#0F2A20;
   --warn:#FBBF24; --warn-bg:#2C2410; --cache:#B9A6FF; --cache-bg:#241E3F;
   --danger:#F87171; --danger-bg:#2C1616; --seg-retr:#4E5C93; --seg-gen:#8E97FF;
@@ -74,6 +74,7 @@ _DARK_VARS = """
 
 # --- Structural rules (theme-agnostic; read from the variables) ---------------
 _STRUCT = """
+html, body{ background:var(--bg); }
 .stApp, [data-testid="stAppViewContainer"]{ background:var(--bg); }
 [data-testid="stSidebar"]{ background:var(--sidebar-bg); }
 [data-testid="stHeader"]{ background:transparent; }
@@ -158,16 +159,33 @@ _DARK_CHROME = """
 /* Inputs, selects, textareas, chat input */
 [data-baseweb="input"], [data-baseweb="base-input"], [data-baseweb="textarea"],
 [data-baseweb="select"] > div{ background:var(--surface) !important; border-color:var(--border) !important; }
-input, textarea{ background:var(--surface) !important; color:var(--ink) !important; }
+input, textarea{ background:var(--surface) !important; color:var(--ink) !important;
+  caret-color:var(--ink) !important; }
 [data-testid="stChatInput"], [data-testid="stChatInput"] textarea{
   background:var(--surface) !important; color:var(--ink) !important; }
 [data-baseweb="select"] *{ color:var(--ink) !important; }
+/* Placeholder text: Streamlit leaves it at the light-mode ink colour (dark navy),
+   which is invisible on the dark surface. -webkit-text-fill-color also needed. */
+input::placeholder, textarea::placeholder{
+  color:var(--muted) !important; -webkit-text-fill-color:var(--muted) !important; opacity:1 !important; }
 
 /* Buttons (secondary) + download button */
-.stButton > button, .stDownloadButton > button{
+.stButton > button, .stDownloadButton > button,
+[data-testid="stFileUploaderDropzone"] button, [data-testid="stBaseButton-secondary"]{
   background:var(--surface) !important; color:var(--ink) !important; border-color:var(--border) !important; }
-.stButton > button:hover, .stDownloadButton > button:hover{
+.stButton > button:hover, .stDownloadButton > button:hover,
+[data-testid="stFileUploaderDropzone"] button:hover{
   border-color:var(--primary) !important; color:var(--primary) !important; }
+
+/* The pinned bottom bar + the chat-input box (Streamlit renders these on the
+   light secondary surface; theme them to the dark page/surface). */
+[data-testid="stBottom"] > div{ background:var(--bg) !important; }
+[data-testid="stChatInput"], [data-testid="stChatInput"] div{ background:var(--surface) !important; }
+[data-testid="stChatInput"] textarea{ background:var(--surface) !important; color:var(--ink) !important; }
+
+/* Inline `code` in markdown/captions (was on a light chip). */
+.stMarkdown code, [data-testid="stCaptionContainer"] code{
+  background:var(--surface-2) !important; color:var(--body) !important; }
 
 /* Bordered containers, expanders, chat bubbles, uploader */
 [data-testid="stVerticalBlockBorderWrapper"]{ border-color:var(--border) !important; }
@@ -185,6 +203,51 @@ hr{ border-color:var(--border) !important; }
 /* Charts + dataframes: keep them as readable light cards on the dark page. */
 [data-testid="stVegaLiteChart"], [data-testid="stDataFrame"], [data-testid="stTable"]{
   background:#FFFFFF; border:1px solid var(--border); border-radius:10px; padding:6px; }
+
+/* ---- Portal overlays + light-theme leftovers (all verified in dark mode) ---- */
+
+/* Selectbox dropdown menu: baseweb portals it OUTSIDE .stApp, where it keeps
+   Streamlit's light base theme (renders as a #F7F8FA panel). Target unscoped. */
+[data-testid="stSelectboxVirtualDropdown"],
+[data-baseweb="popover"] [role="listbox"]{
+  background:var(--surface) !important; border:1px solid var(--border) !important; }
+[data-baseweb="popover"] [role="option"]{
+  background:var(--surface) !important; color:var(--ink) !important; }
+[data-baseweb="popover"] [role="option"] *{ color:var(--ink) !important; }
+[data-baseweb="popover"] [role="option"]:hover,
+[data-baseweb="popover"] [role="option"][aria-selected="true"]{
+  background:var(--surface-2) !important; }
+
+/* Help tooltips: also portalled outside .stApp on the light base theme. */
+[data-testid="stTooltipContent"]{
+  background:var(--surface) !important; border:1px solid var(--border) !important; }
+[data-testid="stTooltipContent"], [data-testid="stTooltipContent"] *{ color:var(--ink) !important; }
+
+/* st.toast pop-ups: light box on the light base theme -> dark surface. */
+[data-testid="stToast"]{ background:var(--surface) !important; border:1px solid var(--border) !important; }
+[data-testid="stToast"], [data-testid="stToast"] *{ color:var(--ink) !important; }
+
+/* st.code(...) blocks (used here for plain error text): light chip -> dark surface. */
+[data-testid="stCode"]{ background:var(--surface-2) !important; border:1px solid var(--border) !important;
+  border-radius:8px !important; }
+[data-testid="stCode"] pre, [data-testid="stCode"] code, [data-testid="stCode"] span{
+  background:transparent !important; color:var(--ink) !important; }
+
+/* file_uploader per-file chip (shown after a file is chosen). */
+[data-testid="stFileUploaderFile"]{ background:var(--surface) !important;
+  border:1px solid var(--border) !important; border-radius:8px !important; }
+
+/* Chrome autofill repaints the field near-white with dark text; force it back. */
+input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:focus{
+  -webkit-text-fill-color:var(--ink) !important; caret-color:var(--ink) !important;
+  -webkit-box-shadow:0 0 0 1000px var(--surface) inset !important; }
+
+/* Dark scrollbars (Chromium): the light base theme keeps a light default bar. */
+::-webkit-scrollbar{ width:11px; height:11px; }
+::-webkit-scrollbar-track{ background:var(--bg); }
+::-webkit-scrollbar-thumb{ background:var(--border); border-radius:999px; border:2px solid var(--bg); }
+::-webkit-scrollbar-thumb:hover{ background:var(--muted); }
+[data-testid="stSidebar"] ::-webkit-scrollbar-track{ background:var(--sidebar-bg); }
 """
 
 
