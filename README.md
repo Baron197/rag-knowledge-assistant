@@ -143,7 +143,7 @@ plumbing end-to-end):
 | Recall@1 | 0.78 |
 | MRR | 0.87 |
 | Avg cost / query | $0.00 |
-| Tests | 15 / 15 passing |
+| Tests | 21 / 21 passing |
 
 **Retrieval A/B — `make eval-compare`** (vector vs hybrid, keyless run):
 
@@ -275,6 +275,7 @@ ui/
   views/chat.py     grounded chat with citations + telemetry
   views/analytics.py filterable charts over the query traces
   views/evaluation.py read-only dashboard of the eval reports (retrieval + Ragas + A/B)
+  views/guide.py      in-app tutorial: how to use the app + what every metric means
 eval/               golden set + A/B + Ragas harness + results
 tests/              end-to-end tests on the keyless path
 Dockerfile          containerised API
@@ -283,7 +284,7 @@ Dockerfile          containerised API
 
 ## Testing & CI
 
-- **Tests** (`pytest`, 15) run end-to-end on the keyless path — fast,
+- **Tests** (`pytest`, 21) run end-to-end on the keyless path — fast,
   deterministic, no network or API key.
 - **Lint** (`ruff`) enforces style and import hygiene.
 - **CI** (GitHub Actions) lints, runs the tests, then runs the evaluation as a

@@ -108,7 +108,8 @@ class Tracer:
         """Return recorded traces (most recent `limit`, or all) for the analytics API."""
         rows = self._read_rows()
         if limit is not None and limit >= 0:
-            rows = rows[-limit:]
+            # len-relative slice so limit=0 yields [] (rows[-0:] would be everything).
+            rows = rows[len(rows) - limit:]
         return rows
 
     def aggregate(self) -> dict[str, Any]:
@@ -117,8 +118,11 @@ class Tracer:
         if not rows:
             return {"queries": 0}
         n = len(rows)
-        total_cost = sum(r["cost_usd"] for r in rows)
-        lat = sorted(sum(r["timings_ms"].values()) for r in rows)
+        # Read every field defensively (`.get`) so a legacy/hand-edited trace line
+        # that parses but is missing a key can't 500 the endpoint -- matching the
+        # tolerance of records()/`/analytics`.
+        total_cost = sum(r.get("cost_usd", 0.0) for r in rows)
+        lat = sorted(sum((r.get("timings_ms") or {}).values()) for r in rows)
         # Nearest-rank p95 (clamped), correct even for very small sample counts.
         p95_idx = min(n - 1, max(0, math.ceil(0.95 * n) - 1))
         return {
@@ -127,5 +131,5 @@ class Tracer:
             "avg_cost_usd": round(total_cost / n, 6),
             "avg_latency_ms": round(sum(lat) / n, 1),
             "p95_latency_ms": round(lat[p95_idx], 1),
-            "avg_contexts": round(sum(r["n_contexts"] for r in rows) / n, 2),
+            "avg_contexts": round(sum(r.get("n_contexts", 0) for r in rows) / n, 2),
         }

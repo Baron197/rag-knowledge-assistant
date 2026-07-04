@@ -12,6 +12,7 @@ eval-compare` and simply displayed here.
 """
 from __future__ import annotations
 
+import html
 import json
 from datetime import datetime
 
@@ -104,9 +105,9 @@ rm = run.get("retrieval_metrics", {}) or {}
 ragas = run.get("ragas_metrics") or None
 semantic = prov.get("embedding") in SEMANTIC
 
-# Provider banner.
+# Provider banner (escape the report's provider strings, like every other view).
 pills = " ".join(
-    f'<span class="pill">{k}:{prov.get(k, "?")}</span>'
+    f'<span class="pill">{k}:{html.escape(str(prov.get(k, "?")))}</span>'
     for k in ("llm", "embedding", "vector_backend", "retrieval_mode", "top_k")
 )
 st.markdown(f'<div class="pills" style="margin:2px 0 6px">{pills}</div>',
@@ -187,9 +188,13 @@ if compare_runs:
     delta_rows = []
     for key, label in metric_names:
         v, h = vec.get(key), hyb.get(key)
-        d = round(h - v, 3) if isinstance(v, (int, float)) and isinstance(h, (int, float)) else None
+        if isinstance(v, (int, float)) and isinstance(h, (int, float)):
+            d = round(h - v, 3)
+            delta_str = f"+{d:.3f}" if d > 0 else f"{d:.3f}"   # keep the + on gains, incl. ints
+        else:
+            delta_str = "—"
         delta_rows.append({"Metric": label, "vector": fmt(v), "hybrid": fmt(h),
-                           "Δ (hybrid−vector)": (f"+{d}" if isinstance(d, float) and d > 0 else fmt(d))})
+                           "Δ (hybrid−vector)": delta_str})
     st.dataframe(pd.DataFrame(delta_rows), hide_index=True, use_container_width=True)
     st.caption(f"From `{comp.get('_name', 'compare')}` · embedding="
                f"`{(comp.get('providers', {}) or {}).get('embedding', '?')}`. "
@@ -223,7 +228,9 @@ for r in reversed(eval_runs):   # chronological
             sel: float(val),
             "providers": f"{p.get('llm', '?')}/{p.get('embedding', '?')}",
         })
-trend_df = pd.DataFrame(trend).dropna(subset=["run"])
+trend_df = pd.DataFrame(trend)
+if not trend_df.empty:   # guard: an empty list has no "run" column to dropna on
+    trend_df = trend_df.dropna(subset=["run"])
 if len(trend_df) >= 2:
     st.line_chart(trend_df, x="run", y=sel, color="providers", height=260)
     st.caption("Lines are split by provider tier (`llm/embedding`) so fake and real "

@@ -185,11 +185,13 @@ with c_dist:
         # sub-millisecond latencies) don't round to duplicate "0–0" buckets.
         bin_width = (hi - lo) / 10
         dec = max(0, min(4, math.ceil(-math.log10(bin_width)) + 1)) if bin_width > 0 else 0
+        # Use the numeric bin lower-edge as x so bars stay in latency order — string
+        # range labels would sort alphabetically ("1200–…" before "800–…").
         hist_df = pd.DataFrame({
-            "bucket": [f"{iv.left:.{dec}f}–{iv.right:.{dec}f}" for iv in hist.index],
+            "latency (ms, ≥)": [round(float(iv.left), dec) for iv in hist.index],
             "queries": hist.to_numpy(),
         })
-        st.bar_chart(hist_df, x="bucket", y="queries", color="#4F46E5", height=240)
+        st.bar_chart(hist_df, x="latency (ms, ≥)", y="queries", color="#4F46E5", height=240)
     else:
         st.caption(f"All queries share ~{lo:.0f} ms latency — no spread to bin.")
 with c_src:

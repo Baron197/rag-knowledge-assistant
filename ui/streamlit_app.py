@@ -1,8 +1,10 @@
 """Streamlit thin client over the FastAPI RAG service -- multipage router.
 
-Two pages share the same session and API:
-  * Ask       (views/chat.py)      -- chat-first grounded Q&A with citations.
-  * Analytics (views/analytics.py) -- filterable charts over the query traces.
+Four pages share the same session and API:
+  * Ask        (views/chat.py)       -- chat-first grounded Q&A with citations.
+  * Analytics  (views/analytics.py)  -- filterable charts over the query traces.
+  * Evaluation (views/evaluation.py) -- read-only view of the eval reports.
+  * Guide      (views/guide.py)      -- in-app tutorial: usage + metric meanings.
 
 The UI holds no RAG logic; every action is an HTTP call (UI -> API -> pipeline).
 
