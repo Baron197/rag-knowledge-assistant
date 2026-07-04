@@ -18,16 +18,24 @@ import streamlit as st
 
 st.set_page_config(
     page_title="Nimbus Console",
-    page_icon="📘",
+    page_icon=":material/forum:",
     layout="wide",
     initial_sidebar_state="expanded",
 )
-common.inject_css()
+
+# Theme: a session-state flag drives light/dark. The toggle (below the nav) is
+# bound to the same key, so flipping it reruns and re-injects the right palette.
+st.session_state.setdefault("dark_mode", False)
+common.inject_theme("dark" if st.session_state.dark_mode else "light")
 
 pages = [
-    st.Page("views/chat.py", title="Ask", icon="💬", default=True),
-    st.Page("views/analytics.py", title="Analytics", icon="📊"),
-    st.Page("views/evaluation.py", title="Evaluation", icon="🎯"),
-    st.Page("views/guide.py", title="Guide", icon="📖"),
+    st.Page("views/chat.py", title="Ask", icon=":material/forum:", default=True),
+    st.Page("views/analytics.py", title="Analytics", icon=":material/monitoring:"),
+    st.Page("views/evaluation.py", title="Evaluation", icon=":material/verified:"),
+    st.Page("views/guide.py", title="Guide", icon=":material/menu_book:"),
 ]
-st.navigation(pages).run()
+nav = st.navigation(pages)
+with st.sidebar:
+    st.toggle(":material/dark_mode: Dark mode", key="dark_mode",
+              help="Switch between light and dark themes.")
+nav.run()

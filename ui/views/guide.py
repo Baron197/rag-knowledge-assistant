@@ -10,6 +10,24 @@ from __future__ import annotations
 
 import common
 import streamlit as st
+from common import CACHE_ICON, WARN_ICON
+
+# Monochrome guide-card marks (16px, currentColor at --body) that echo the four
+# nav Material Symbols, for the "The pages" cards.
+_GC_ASK = ('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+           'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--body);flex:none">'
+           '<path d="M14 9a3 3 0 0 1-3 3H7l-3 2V6a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3Z"/>'
+           '<path d="M17 8h1a3 3 0 0 1 3 3v7l-3-2h-4a3 3 0 0 1-3-3"/></svg>')
+_GC_ANALYTICS = ('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+                 'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--body);flex:none">'
+                 '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m7 14 3-4 3 3 5-6"/></svg>')
+_GC_EVAL = ('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+            'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--body);flex:none">'
+            '<path d="M12 3 5 6v5c0 4.2 3 7.5 7 9 4-1.5 7-4.8 7-9V6Z"/><path d="m9 12 2 2 4-4"/></svg>')
+_GC_GUIDE = ('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+             'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--body);flex:none">'
+             '<path d="M12 6v14"/><path d="M3 5h6a3 3 0 0 1 3 3 3 3 0 0 1 3-3h6"/>'
+             '<path d="M3 5v13h6a3 3 0 0 1 3 3 3 3 0 0 1 3-3h6V5"/></svg>')
 
 common.render_header()
 
@@ -40,7 +58,7 @@ st.markdown(
 """,
     unsafe_allow_html=True)
 
-st.markdown("### 📖 Guide")
+st.markdown("### :material/menu_book: Guide")
 st.caption("How the app works, and what every metric and evaluation number means. "
            "New here? Start with **Getting started**, then dip into the metric tabs "
            "whenever a number needs explaining.")
@@ -55,8 +73,11 @@ def card(title: str, body: str, tag: str | None = None, kind: str = "info") -> N
         unsafe_allow_html=True)
 
 
-tabs = st.tabs(["🚀 Getting started", "💬 Reading an answer", "📊 Analytics metrics",
-                "🎯 Evaluation metrics", "📚 Concepts"])
+tabs = st.tabs([":material/rocket_launch: Getting started",
+                ":material/forum: Reading an answer",
+                ":material/monitoring: Analytics metrics",
+                ":material/verified: Evaluation metrics",
+                ":material/book_2: Concepts"])
 
 # ── Getting started ───────────────────────────────────────────────────────────
 with tabs[0]:
@@ -86,13 +107,13 @@ with tabs[0]:
                     unsafe_allow_html=True)
 
     st.markdown("#### The pages")
-    card("💬 Ask", "The chat. Ask grounded questions, adjust how many passages are "
-                   "retrieved (<code>k</code>), upload documents, and re-index the corpus.")
-    card("📊 Analytics", "Operational dashboard over past queries — cost, latency, tokens, "
-                         "and which documents get retrieved most. <i>How is it running?</i>")
-    card("🎯 Evaluation", "Quality dashboard — retrieval and answer-quality scores against a "
-                          "fixed test set, plus a vector-vs-hybrid comparison. <i>How good is it?</i>")
-    card("📖 Guide", "You are here.")
+    card(f"{_GC_ASK}Ask", "The chat. Ask grounded questions, adjust how many passages are "
+                          "retrieved (<code>k</code>), upload documents, and re-index the corpus.")
+    card(f"{_GC_ANALYTICS}Analytics", "Operational dashboard over past queries — cost, latency, "
+                          "tokens, and which documents get retrieved most. <i>How is it running?</i>")
+    card(f"{_GC_EVAL}Evaluation", "Quality dashboard — retrieval and answer-quality scores against "
+                          "a fixed test set, plus a vector-vs-hybrid comparison. <i>How good is it?</i>")
+    card(f"{_GC_GUIDE}Guide", "You are here.")
 
     st.markdown("#### Bringing your own documents")
     st.markdown(
@@ -128,9 +149,9 @@ with tabs[1]:
 
     st.markdown(
         '<div class="badges"><span class="badge mode">mode: hybrid</span>'
-        '<span class="badge cache">⚡ Cache hit</span></div>', unsafe_allow_html=True)
+        f'<span class="badge cache">{CACHE_ICON} Cache hit</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="ann"><b>Badges</b> — <b>mode</b> is the retrieval strategy '
-                '(<code>vector</code> or <code>hybrid</code>). <b>⚡ Cache hit</b> means this '
+                '(<code>vector</code> or <code>hybrid</code>). <b>Cache hit</b> means this '
                 'exact question was asked before and served instantly from memory at $0.</div>',
                 unsafe_allow_html=True)
 
@@ -153,7 +174,7 @@ with tabs[1]:
 
     st.markdown("#### When the docs don't have the answer")
     st.markdown(
-        '<div class="badges"><span class="badge refuse">⚠ Not grounded in the corpus</span></div>',
+        f'<div class="badges"><span class="badge refuse">{WARN_ICON} Not grounded in the corpus</span></div>',
         unsafe_allow_html=True)
     st.markdown(
         "Ask something outside the documents and a well-configured system **refuses** — "
@@ -176,7 +197,7 @@ with tabs[2]:
          "question sent in) plus <b>completion</b> (the answer). Tokens drive cost.", "info")
     card("Contexts", "How many passages were retrieved and fed to the model — the "
          "<code>k</code> value. More context can help, but adds tokens and noise.", "info")
-    card("Cache hit ⚡", "The question matched a previous one exactly, so the stored answer "
+    card("Cache hit", "The question matched a previous one exactly, so the stored answer "
          "was returned instantly at $0. Cache hits are <i>not</i> traced, so Analytics "
          "reflects real (uncached) work only.", "info")
 
@@ -268,7 +289,7 @@ with tabs[4]:
         card("Vector store", "Where the embeddings live and get searched — a NumPy matrix by "
              "default, or Postgres + pgvector for scale.")
         card("Cache", "An in-memory store of recent answers; repeat questions return instantly "
-             "at $0 (marked ⚡).")
+             "at $0 (flagged as a cache hit).")
 
 st.divider()
 st.caption("Want the deep-dive? The repo ships a full written study guide at "

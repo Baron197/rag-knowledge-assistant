@@ -26,7 +26,7 @@ SEMANTIC = ("openai", "hf")   # embedding tiers for which refusal/Ragas are mean
 
 common.use_wide()
 common.render_header()
-st.markdown("### 🎯 Model evaluation")
+st.markdown("### :material/verified: Model evaluation")
 
 
 def pretty_ts(stamp: str) -> str:
@@ -61,7 +61,7 @@ if health is None:
 # --- Load reports -------------------------------------------------------------
 top = st.columns([1, 0.16])
 with top[1]:
-    if st.button("↻ Refresh", use_container_width=True):
+    if st.button(":material/refresh: Refresh", use_container_width=True):
         st.rerun()
 try:
     resp = requests.get(f"{API_URL}/eval-results", timeout=15)

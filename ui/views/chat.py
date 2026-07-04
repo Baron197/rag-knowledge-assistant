@@ -15,10 +15,13 @@ import streamlit as st
 from common import (
     ALLOWED_TYPES,
     API_URL,
+    CACHE_ICON,
+    ERR_ICON,
     MAX_FILE_BYTES,
     MAX_REQUEST_BYTES,
     REQUEST_TIMEOUT,
     SERVER_DEFAULT_K,
+    WARN_ICON,
     error_detail,
     get_health,
     get_metrics,
@@ -77,7 +80,7 @@ def run_query(question: str) -> dict:
 def render_assistant(meta: dict, idx: int) -> None:
     """Render one assistant turn from stored meta (never re-calls the API)."""
     if "error" in meta:
-        st.markdown('<div class="badges"><span class="badge err">⚠ Query error'
+        st.markdown(f'<div class="badges"><span class="badge err">{ERR_ICON} Query error'
                     '</span></div>', unsafe_allow_html=True)
         st.code(meta["error"], language=None)
         if st.button("Ask again", key=f"retry_{idx}"):
@@ -90,7 +93,7 @@ def render_assistant(meta: dict, idx: int) -> None:
 
     # (1) Answer, rendered as Markdown with the literal [n] markers tinted.
     if not grounded:
-        st.markdown('<div class="badges"><span class="badge refuse">⚠ Not grounded '
+        st.markdown(f'<div class="badges"><span class="badge refuse">{WARN_ICON} Not grounded '
                     'in the corpus</span></div>', unsafe_allow_html=True)
     st.markdown(tint_citations(meta.get("answer", ""), citations), unsafe_allow_html=True)
 
@@ -98,7 +101,7 @@ def render_assistant(meta: dict, idx: int) -> None:
     badges = ('<span class="badge mode">mode: '
               f'{html.escape(str(meta.get("retrieval_mode", "?")))}</span>')
     if meta.get("cached"):
-        badges += '<span class="badge cache">⚡ Cache hit</span>'
+        badges += f'<span class="badge cache">{CACHE_ICON} Cache hit</span>'
     st.markdown(f'<div class="badges">{badges}</div>', unsafe_allow_html=True)
 
     # (3) Telemetry strip.
@@ -143,7 +146,7 @@ def render_assistant(meta: dict, idx: int) -> None:
 
     # (4) Sources.
     if grounded:
-        with st.expander(f"📎 Sources ({len(citations)})", expanded=False):
+        with st.expander(f":material/attach_file: Sources ({len(citations)})", expanded=False):
             for c in citations:
                 st.markdown(
                     f'<div class="srccard"><div class="hd">[{int(c["n"])}] '
@@ -157,10 +160,10 @@ def render_assistant(meta: dict, idx: int) -> None:
 def render_message(m: dict, idx: int) -> None:
     """Render one stored message (user or assistant) from session state."""
     if m["role"] == "user":
-        with st.chat_message("user"):
+        with st.chat_message("user", avatar=":material/person:"):
             st.markdown(m["content"])
     else:
-        with st.chat_message("assistant", avatar="📘"):
+        with st.chat_message("assistant", avatar=":material/forum:"):
             render_assistant(m["meta"], idx)
 
 
@@ -270,7 +273,7 @@ with st.sidebar:
                             data = r.json()
                             status.update(label="Indexed", state="complete")
                             st.toast(f"Indexed {data['indexed_chunks']} chunks · "
-                                     f"{len(data['saved'])} file(s)", icon="✅")
+                                     f"{len(data['saved'])} file(s)", icon=":material/task_alt:")
                             if data.get("skipped"):
                                 st.warning("Skipped: " + ", ".join(data["skipped"]))
                             invalidate_cache()
@@ -284,7 +287,7 @@ with st.sidebar:
                     r = requests.post(f"{API_URL}/ingest", params={"reset": "true"}, timeout=600)
                     r.raise_for_status()
                     status.update(label="Index rebuilt", state="complete")
-                st.toast(f"Indexed {r.json()['ingested_chunks']} chunks", icon="✅")
+                st.toast(f"Indexed {r.json()['ingested_chunks']} chunks", icon=":material/task_alt:")
                 invalidate_cache()
                 st.rerun()
             except requests.RequestException as exc:  # noqa: BLE001
@@ -305,7 +308,7 @@ with st.sidebar:
         if st.button("Clear chat", use_container_width=True,
                      disabled=not st.session_state.messages):
             st.session_state.messages = []
-            st.toast("Conversation cleared", icon="🧹")
+            st.toast("Conversation cleared", icon=":material/delete:")
             st.rerun()
         st.caption("Tip: ask the same question twice to see a cache hit — $0 cost.")
 
@@ -384,9 +387,9 @@ else:
     if st.session_state.pending:
         q = st.session_state.pending
         st.session_state.pending = None
-        with st.chat_message("user"):
+        with st.chat_message("user", avatar=":material/person:"):
             st.markdown(q)
-        with st.chat_message("assistant", avatar="📘"):
+        with st.chat_message("assistant", avatar=":material/forum:"):
             meta = run_query(q)
             meta.setdefault("question", q)
             render_assistant(meta, len(st.session_state.messages) + 1)

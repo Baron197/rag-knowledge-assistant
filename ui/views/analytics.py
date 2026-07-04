@@ -28,7 +28,7 @@ REFUSAL_MARKER = "don't have enough information"
 
 common.use_wide()   # data-dense dashboard -> widen past the chat reading column
 common.render_header()
-st.markdown("### 📊 Query analytics")
+st.markdown("### :material/monitoring: Query analytics")
 
 health = get_health()
 if health is None:
