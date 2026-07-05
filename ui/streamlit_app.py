@@ -17,7 +17,7 @@ import common
 import streamlit as st
 
 st.set_page_config(
-    page_title="Nimbus Console",
+    page_title="Knowledge Assistant",
     page_icon=":material/forum:",
     layout="wide",
     initial_sidebar_state="expanded",

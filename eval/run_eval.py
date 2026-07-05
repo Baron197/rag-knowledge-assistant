@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -101,6 +102,8 @@ def retrieval_metrics(rows: list[dict], pipeline: RAGPipeline) -> tuple[dict, li
         per_q.append(
             {
                 "question": r["question"],
+                "answer": ans.answer,
+                "ground_truth": r.get("ground_truth", ""),
                 "expected_sources": sorted(expected),
                 "retrieved_sources": ordered,
                 "refusal_question": is_refusal_q,
@@ -133,6 +136,12 @@ def ragas_metrics(rows: list[dict], pipeline: RAGPipeline) -> dict | None:
     if pipeline.settings.llm_provider != "openai":
         print("[ragas] skipped (LLM_PROVIDER != openai)")
         return None
+    # Ragas builds its own LangChain ChatOpenAI / OpenAIEmbeddings judges, which read
+    # OPENAI_API_KEY from the OS environment -- NOT our pydantic-settings `.env`. The
+    # pipeline passes the key explicitly (so answers/embeddings already worked), but the
+    # Ragas judge can't see it. Bridge the loaded key into the env var Ragas expects.
+    if pipeline.settings.openai_api_key and not os.environ.get("OPENAI_API_KEY"):
+        os.environ["OPENAI_API_KEY"] = pipeline.settings.openai_api_key
     try:
         from datasets import Dataset
         from ragas import evaluate

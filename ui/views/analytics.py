@@ -235,6 +235,6 @@ st.dataframe(
 st.download_button(
     "Download filtered data (CSV)",
     data=f.drop(columns=["sources"]).to_csv(index=False),
-    file_name="nimbus-analytics.csv",
+    file_name="knowledge-assistant-analytics.csv",
     mime="text/csv",
 )

@@ -21,7 +21,7 @@ MAX_FILE_BYTES = 10 * 1024 * 1024      # per-file cap (mirrors the API)
 MAX_REQUEST_BYTES = 50 * 1024 * 1024   # whole-request cap (mirrors the API)
 REQUEST_TIMEOUT = 120                  # seconds for a /query call
 
-# Monochrome brand logomark: an "indexed cloud" (a Nimbus cloud carrying two
+# Monochrome brand logomark: an "indexed cloud" (a cloud carrying two
 # retrieved-doc index lines). currentColor -> inherits the wrapper's --body tone
 # so it stays neutral and adapts to light/dark.
 BRAND_MARK = (
@@ -325,7 +325,7 @@ def render_header() -> None:
     st.markdown(
         f"""
 <div class="apphead">
-  <div class="brand">{BRAND_MARK}Nimbus Console</div>
+  <div class="brand">{BRAND_MARK}Knowledge Assistant</div>
   <div class="pills">{pills}</div>
 </div>
 <div class="tagline">Grounded answers over your indexed docs — with visible

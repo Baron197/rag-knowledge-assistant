@@ -169,7 +169,7 @@ def render_message(m: dict, idx: int) -> None:
 
 def build_export() -> str:
     """Serialise the conversation to Markdown for the download button."""
-    lines = ["# Nimbus Console — conversation", ""]
+    lines = ["# Knowledge Assistant — conversation", ""]
     for m in st.session_state.messages:
         if m["role"] == "user":
             lines += [f"## Q: {m['content']}", ""]
@@ -300,7 +300,7 @@ with st.sidebar:
         st.download_button(
             "Export conversation",
             data=build_export(),
-            file_name="nimbus-conversation.md",
+            file_name="knowledge-assistant-conversation.md",
             mime="text/markdown",
             use_container_width=True,
             disabled=not st.session_state.messages,
