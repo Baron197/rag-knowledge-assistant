@@ -24,5 +24,6 @@ eval/results/
 # ruff
 .ruff_cache/
 
-# Personal docs / study material (kept local, not published)
-docs/
+# Personal docs / study material (kept local, not published).
+# Anchored to the repo root so it never matches the data/docs corpus.
+/docs/
