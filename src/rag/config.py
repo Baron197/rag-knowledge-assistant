@@ -80,6 +80,12 @@ class Settings(BaseSettings):
     enable_cache: bool = True
     cache_size: int = 256                 # max distinct questions kept in the LRU
 
+    # --- API auth (optional) ------------------------------------------------
+    # If set, the cost/mutation endpoints (/query, /ingest, /upload) require a
+    # matching `X-API-Key` header. Empty (default) leaves the API open, so
+    # keyless/local use is unchanged. The Streamlit UI forwards it automatically.
+    api_key: str = ""
+
     # --- Paths --------------------------------------------------------------
     docs_dir: Path = Path("data/docs")    # source documents to ingest
     trace_dir: Path = Path("traces")      # where per-query traces are written

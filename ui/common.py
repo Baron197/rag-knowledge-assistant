@@ -19,6 +19,10 @@ API_URL = os.environ.get("RAG_API_URL", "http://localhost:8000").rstrip("/")
 # is DISABLED (local dev just works); set APP_PASSWORD in the deployment env to
 # turn it on. The Guide page is always public.
 APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
+# Optional API key for the API's cost/mutation endpoints (/query, /ingest,
+# /upload). When the API runs with API_KEY set, the UI forwards it as an
+# X-API-Key header (see auth_headers()); unset = open (local dev).
+API_KEY = os.environ.get("API_KEY", "")
 SERVER_DEFAULT_K = 4            # matches Settings.top_k; k is only sent when overridden
 ALLOWED_TYPES = ["md", "txt", "html", "htm", "pdf"]
 MAX_FILE_BYTES = 10 * 1024 * 1024      # per-file cap (mirrors the API)
@@ -285,6 +289,12 @@ def invalidate_cache() -> None:
     """Force /health and /metrics to refetch on the next run."""
     st.session_state.health = None
     st.session_state.metrics = None
+
+
+def auth_headers() -> dict:
+    """X-API-Key header for the API's protected endpoints (/query, /ingest,
+    /upload). Empty when API_KEY is unset, so keyless/local use is unchanged."""
+    return {"X-API-Key": API_KEY} if API_KEY else {}
 
 
 def get_health() -> dict | None:

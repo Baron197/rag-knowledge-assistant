@@ -22,7 +22,7 @@ import threading
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import FastAPI, File, HTTPException, Request, UploadFile
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Request, UploadFile
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -127,7 +127,17 @@ def health() -> dict:
     }
 
 
-@app.post("/ingest")
+def require_api_key(x_api_key: Annotated[str | None, Header()] = None) -> None:
+    """Optional API-key gate for the cost/mutation endpoints (/query, /ingest,
+    /upload). No-op when `api_key` is unset (the default) -- keyless/local use is
+    unchanged. When set, requests must carry a matching `X-API-Key` header;
+    otherwise 401. Read-only endpoints and /health stay open."""
+    expected = get_settings().api_key
+    if expected and x_api_key != expected:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
+
+@app.post("/ingest", dependencies=[Depends(require_api_key)])
 def run_ingest(reset: bool = True) -> dict:
     """(Re)build the index from DOCS_DIR, then drop the cached pipeline so the next
     request sees the refreshed store."""
@@ -140,7 +150,7 @@ def run_ingest(reset: bool = True) -> dict:
     return {"ingested_chunks": n}
 
 
-@app.post("/upload")
+@app.post("/upload", dependencies=[Depends(require_api_key)])
 async def upload(files: Annotated[list[UploadFile], File(...)]) -> dict:
     """Save uploaded document(s) into DOCS_DIR and rebuild the index.
 
@@ -188,7 +198,7 @@ async def upload(files: Annotated[list[UploadFile], File(...)]) -> dict:
     return {"saved": saved, "skipped": skipped, "indexed_chunks": n}
 
 
-@app.post("/query", response_model=QueryResponse)
+@app.post("/query", response_model=QueryResponse, dependencies=[Depends(require_api_key)])
 def query(req: QueryRequest) -> QueryResponse:
     """Answer a question with grounded citations, cost and latency."""
     try:

@@ -66,7 +66,8 @@ def run_query(question: str) -> dict:
     try:
         with st.status("Retrieving passages and generating a grounded answer…",
                        expanded=False) as status:
-            resp = requests.post(f"{API_URL}/query", json=body, timeout=REQUEST_TIMEOUT)
+            resp = requests.post(f"{API_URL}/query", json=body, timeout=REQUEST_TIMEOUT,
+                                 headers=common.auth_headers())
             if resp.status_code != 200:
                 status.update(label="Query failed", state="error")
                 return {"error": error_detail(resp)}
@@ -261,7 +262,8 @@ with st.sidebar:
                 payload = [("files", (f.name, f.getvalue())) for f in files]
                 try:
                     with st.status("Uploading & indexing…", expanded=False) as status:
-                        r = requests.post(f"{API_URL}/upload", files=payload, timeout=600)
+                        r = requests.post(f"{API_URL}/upload", files=payload, timeout=600,
+                                          headers=common.auth_headers())
                         if r.status_code == 413:
                             status.update(label="Upload rejected", state="error")
                             st.error("Upload too large — 50 MB per request max.")
@@ -286,7 +288,8 @@ with st.sidebar:
         if st.button("Re-index corpus", use_container_width=True, disabled=health is None):
             try:
                 with st.status("Rebuilding the index…", expanded=False) as status:
-                    r = requests.post(f"{API_URL}/ingest", params={"reset": "true"}, timeout=600)
+                    r = requests.post(f"{API_URL}/ingest", params={"reset": "true"}, timeout=600,
+                                      headers=common.auth_headers())
                     r.raise_for_status()
                     status.update(label="Index rebuilt", state="complete")
                 st.toast(f"Indexed {r.json()['ingested_chunks']} chunks", icon=":material/task_alt:")

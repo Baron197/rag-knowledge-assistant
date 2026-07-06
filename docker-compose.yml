@@ -33,6 +33,7 @@ services:
       VECTOR_BACKEND: ${VECTOR_BACKEND:-numpy}
       RETRIEVAL_MODE: ${RETRIEVAL_MODE:-vector}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      API_KEY: ${API_KEY:-}                # optional: gate /query,/ingest,/upload with X-API-Key
       # The DB is always the `db` service on the compose network. Hardcoded (not
       # ${PG_DSN}) so a local .env with PG_DSN=localhost -- which is correct when you
       # run the app directly -- can't leak in and make the container dial localhost.
@@ -64,6 +65,7 @@ services:
     environment:
       RAG_API_URL: ${RAG_API_URL:-http://api:8000}
       APP_PASSWORD: ${APP_PASSWORD:-}   # set in .env to require login on Ask/Analytics/Evaluation
+      API_KEY: ${API_KEY:-}             # forwarded as X-API-Key to the API when set
 
   # One-off evaluation harness -- NOT started by `docker compose up` (it's behind
   # the "tools" profile). Built from Dockerfile.eval (full deps incl. Ragas), it
