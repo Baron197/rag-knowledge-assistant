@@ -23,3 +23,6 @@ eval/results/
 
 # ruff
 .ruff_cache/
+
+# Personal docs / study material (kept local, not published)
+docs/
