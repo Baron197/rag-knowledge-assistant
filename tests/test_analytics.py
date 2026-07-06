@@ -61,3 +61,17 @@ def test_analytics_respects_limit(tmp_path, monkeypatch):
     r = client.get("/analytics", params={"limit": 2})
     assert r.status_code == 200
     assert r.json()["count"] == 2
+
+
+def test_analytics_limit_above_count_returns_all(tmp_path, monkeypatch):
+    """A limit larger than the trace count returns ALL traces. Regression: a
+    len-relative slice previously dropped the oldest rows when count < limit < 2*count
+    (e.g. 3 traces + limit=4 returned only 1)."""
+    client = _client(tmp_path, monkeypatch)
+    client.post("/ingest")
+    for q in ("What are the rate limits?", "How do I rotate a key?", "What plans exist?"):
+        client.post("/query", json={"question": q})
+    for limit in (4, 5, 100):  # in/above the previously-buggy band for count=3
+        r = client.get("/analytics", params={"limit": limit})
+        assert r.status_code == 200
+        assert r.json()["count"] == 3, f"limit={limit} should return all 3 traces"

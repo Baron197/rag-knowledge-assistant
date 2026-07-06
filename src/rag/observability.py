@@ -108,8 +108,10 @@ class Tracer:
         """Return recorded traces (most recent `limit`, or all) for the analytics API."""
         rows = self._read_rows()
         if limit is not None and limit >= 0:
-            # len-relative slice so limit=0 yields [] (rows[-0:] would be everything).
-            rows = rows[len(rows) - limit:]
+            # Last `limit` traces (or ALL when limit >= len); limit=0 -> []. A
+            # len-relative slice was wrong for len < limit < 2*len (it dropped the
+            # oldest rows instead of returning all of them).
+            rows = rows[-limit:] if limit else []
         return rows
 
     def aggregate(self) -> dict[str, Any]:
