@@ -15,6 +15,10 @@ import requests
 import streamlit as st
 
 API_URL = os.environ.get("RAG_API_URL", "http://localhost:8000").rstrip("/")
+# Shared-password gate for the Ask/Analytics/Evaluation pages. If unset, the gate
+# is DISABLED (local dev just works); set APP_PASSWORD in the deployment env to
+# turn it on. The Guide page is always public.
+APP_PASSWORD = os.environ.get("APP_PASSWORD", "")
 SERVER_DEFAULT_K = 4            # matches Settings.top_k; k is only sent when overridden
 ALLOWED_TYPES = ["md", "txt", "html", "htm", "pdf"]
 MAX_FILE_BYTES = 10 * 1024 * 1024      # per-file cap (mirrors the API)
@@ -83,6 +87,10 @@ html, body{ background:var(--bg); }
 [data-testid="stChatMessage"] .stMarkdown p{ font-size:14.5px; line-height:1.62; }
 [data-testid="stChatMessage"] .stMarkdown :is(h1,h2,h3,h4){
   font-size:15px; font-weight:700; margin:.5em 0 .25em; line-height:1.4; }
+/* Sidebar lifetime metrics: shrink st.metric so long values ("$0.000012",
+   "853 ms") fit the narrow sidebar column instead of truncating with an ellipsis. */
+[data-testid="stSidebar"] [data-testid="stMetricValue"]{ font-size:1.05rem; line-height:1.3; }
+[data-testid="stSidebar"] [data-testid="stMetricLabel"] p{ font-size:11.5px; }
 """
 
 # --- Component styles (all colours via the variables above) -------------------
@@ -189,9 +197,17 @@ input::placeholder, textarea::placeholder{
 
 /* Bordered containers, expanders, chat bubbles, uploader */
 [data-testid="stVerticalBlockBorderWrapper"]{ border-color:var(--border) !important; }
-[data-testid="stExpander"]{ background:var(--surface) !important; border-color:var(--border) !important; }
+[data-testid="stExpander"], [data-testid="stExpander"] details, [data-testid="stExpander"] summary{
+  background:var(--surface) !important; border-color:var(--border) !important; }
 [data-testid="stExpander"] summary, [data-testid="stExpander"] summary *{ color:var(--ink) !important; }
 [data-testid="stChatMessage"]{ background:var(--surface) !important; }
+/* Chat avatars: the icon sat on a white box (testid is stChatMessageAvatarCustom
+   for :material/...: avatars, so match the prefix). Theme it to the surface. */
+[data-testid^="stChatMessageAvatar"]{ background:var(--surface) !important;
+  border:1px solid var(--border) !important; }
+[data-testid^="stChatMessageAvatar"], [data-testid^="stChatMessageAvatar"] *{
+  color:var(--body) !important; fill:var(--body) !important; }
+[data-testid="stForm"]{ background:var(--surface) !important; border-color:var(--border) !important; }
 [data-testid="stFileUploaderDropzone"]{ background:var(--surface-2) !important; }
 hr{ border-color:var(--border) !important; }
 
@@ -334,3 +350,40 @@ citations and per-query cost, latency &amp; token observability.</div>
         unsafe_allow_html=True,
     )
     st.divider()
+
+
+def require_auth() -> None:
+    """Gate a page behind the shared APP_PASSWORD.
+
+    No-op when APP_PASSWORD is unset (local dev). Otherwise an unauthenticated
+    visitor gets a centered password prompt and the page halts; one success
+    unlocks every gated page for the browser session. Call this at the very top
+    of the pages that should be protected (not the public Guide page).
+    """
+    if not APP_PASSWORD or st.session_state.get("authed"):
+        return
+    st.markdown(
+        f'<div class="apphead"><div class="brand">{BRAND_MARK}Knowledge Assistant</div></div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("#### :material/lock: Sign in")
+    st.caption("This area is password-protected. Enter the access password to continue — "
+               "or open the **Guide** page, which is public.")
+    with st.form("login_form", clear_on_submit=False):
+        pw = st.text_input("Password", type="password", placeholder="Access password")
+        submitted = st.form_submit_button("Sign in", type="primary")
+    if submitted:
+        if pw == APP_PASSWORD:
+            st.session_state.authed = True
+            st.rerun()
+        else:
+            st.error("Incorrect password. Try again.")
+    st.stop()
+
+
+def logout_button() -> None:
+    """Render a Log out button (call inside a sidebar context) when signed in."""
+    if APP_PASSWORD and st.session_state.get("authed"):
+        if st.button(":material/logout: Log out", use_container_width=True):
+            st.session_state.authed = False
+            st.rerun()

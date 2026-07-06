@@ -10,8 +10,9 @@ venv/
 data/index/
 traces/
 eval/results/
-ui/
 tests/
+# ui/ is intentionally NOT ignored -- Dockerfile.ui copies it for the UI image.
+# (The API image's Dockerfile doesn't COPY ui/, so the API image stays lean.)
 *.docx
 *.pdf
 *.md

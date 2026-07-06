@@ -1,0 +1,25 @@
+# One-off image for the evaluation harness. Unlike the lean API image, this one
+# needs the full pipeline deps PLUS ragas + datasets (the generation metrics) and
+# the eval/ code. Not part of the running stack -- run on demand with:
+#   docker compose run --rm eval                    # full run (+ Ragas)
+#   docker compose run --rm eval python -m eval.run_eval --no-ragas
+#   docker compose run --rm eval python -m eval.run_eval --compare
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements-eval.txt ./
+RUN pip install --no-cache-dir -r requirements-eval.txt
+
+COPY src/ ./src/
+COPY data/ ./data/
+COPY eval/ ./eval/
+
+# Reports are written to /app/eval/results (the API serves them from there too);
+# docker-compose bind-mounts ./eval/results here so they persist on the host.
+ENV LLM_PROVIDER=fake \
+    EMBEDDING_PROVIDER=fake \
+    VECTOR_BACKEND=numpy
+
+# Default command; override the args via `docker compose run --rm eval ...`.
+CMD ["python", "-m", "eval.run_eval"]

@@ -28,6 +28,8 @@ from common import (
     invalidate_cache,
 )
 
+common.require_auth()  # gate this page behind APP_PASSWORD (no-op when unset)
+
 # Demo starter questions for the bundled "Nimbus" corpus. Framed as examples so
 # they read as swappable demo content, not core UI.
 DEMO_QUESTIONS = [
@@ -325,7 +327,8 @@ with st.sidebar:
             c5, c6 = st.columns(2)
             c5.metric("Total cost", f"${m.get('total_cost_usd', 0):.4f}")
             c6.metric("Avg cost / query", f"${m.get('avg_cost_usd', 0):.6f}")
-            st.caption("Full charts on the **Analytics** page →")
+            st.page_link("views/analytics.py", label="Full charts on the Analytics page",
+                         icon=":material/monitoring:")
         else:
             st.caption("No queries yet — ask something to populate metrics.")
 

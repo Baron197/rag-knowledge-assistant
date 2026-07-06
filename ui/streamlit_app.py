@@ -28,14 +28,17 @@ st.set_page_config(
 st.session_state.setdefault("dark_mode", False)
 common.inject_theme("dark" if st.session_state.dark_mode else "light")
 
+# Guide is the public landing page; Ask/Analytics/Evaluation sit behind a password
+# gate (see common.require_auth, enabled by APP_PASSWORD).
 pages = [
-    st.Page("views/chat.py", title="Ask", icon=":material/forum:", default=True),
+    st.Page("views/guide.py", title="Guide", icon=":material/menu_book:", default=True),
+    st.Page("views/chat.py", title="Ask", icon=":material/forum:"),
     st.Page("views/analytics.py", title="Analytics", icon=":material/monitoring:"),
     st.Page("views/evaluation.py", title="Evaluation", icon=":material/verified:"),
-    st.Page("views/guide.py", title="Guide", icon=":material/menu_book:"),
 ]
 nav = st.navigation(pages)
 with st.sidebar:
     st.toggle(":material/dark_mode: Dark mode", key="dark_mode",
               help="Switch between light and dark themes.")
+    common.logout_button()   # only shown once signed in
 nav.run()

@@ -1,6 +1,8 @@
-# Local stack. Two common ways to run:
-#   docker compose up -d db          # just Postgres+pgvector (set VECTOR_BACKEND=pgvector)
-#   docker compose up --build api    # the API in a container (defaults to keyless mode)
+# Local / single-VM stack. Common ways to run:
+#   docker compose up -d db           # just Postgres+pgvector (set VECTOR_BACKEND=pgvector)
+#   docker compose up --build api     # the API in a container (keyless by default)
+#   docker compose up --build         # FULL STACK: db + API + Streamlit UI
+#                                       (put openai+pgvector in .env; UI on :8501, API on :8000)
 services:
   db:
     image: pgvector/pgvector:pg16
@@ -22,17 +24,76 @@ services:
     build: .
     ports:
       - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy   # wait for Postgres before the startup ingest
     environment:
       LLM_PROVIDER: ${LLM_PROVIDER:-fake}
       EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-fake}
       VECTOR_BACKEND: ${VECTOR_BACKEND:-numpy}
+      RETRIEVAL_MODE: ${RETRIEVAL_MODE:-vector}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      # Inside the compose network the database's hostname is `db`, not
-      # localhost. Start it first (docker compose up -d db) when using
-      # VECTOR_BACKEND=pgvector.
-      PG_DSN: ${PG_DSN:-postgresql://rag:rag@db:5432/rag}
+      # The DB is always the `db` service on the compose network. Hardcoded (not
+      # ${PG_DSN}) so a local .env with PG_DSN=localhost -- which is correct when you
+      # run the app directly -- can't leak in and make the container dial localhost.
+      PG_DSN: postgresql://rag:rag@db:5432/rag
     volumes:
       - ./data:/app/data
+      # Serve evaluation reports on the Evaluation page: the `eval` service writes
+      # them here and this mount lets the API read them back out.
+      - ./eval/results:/app/eval/results
+    healthcheck:
+      # The UI waits for this before starting (python is already in the image).
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 40s              # give the startup ingest (embeds the corpus) time to finish
+
+  # Thin Streamlit UI (built from Dockerfile.ui). Talks to the API over the
+  # compose network at http://api:8000; the browser reaches the UI on :8501.
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    ports:
+      - "8501:8501"
+    depends_on:
+      api:
+        condition: service_healthy
+    environment:
+      RAG_API_URL: ${RAG_API_URL:-http://api:8000}
+      APP_PASSWORD: ${APP_PASSWORD:-}   # set in .env to require login on Ask/Analytics/Evaluation
+
+  # One-off evaluation harness -- NOT started by `docker compose up` (it's behind
+  # the "tools" profile). Built from Dockerfile.eval (full deps incl. Ragas), it
+  # connects to the same Postgres, re-ingests the corpus, scores the golden set,
+  # and writes reports to ./eval/results -- which the `api` mounts, so they show
+  # up on the Evaluation page. Run it (locally or on the GCP VM) with:
+  #   docker compose run --rm eval                                  # full run (+ Ragas)
+  #   docker compose run --rm eval python -m eval.run_eval --compare
+  eval:
+    build:
+      context: .
+      dockerfile: Dockerfile.eval
+    profiles: ["tools"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      LLM_PROVIDER: ${LLM_PROVIDER:-fake}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-fake}
+      VECTOR_BACKEND: ${VECTOR_BACKEND:-numpy}
+      RETRIEVAL_MODE: ${RETRIEVAL_MODE:-vector}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Same DB as the API (hardcoded to the compose service, like `api`), so an
+      # eval with VECTOR_BACKEND=pgvector scores against the deployed index.
+      PG_DSN: postgresql://rag:rag@db:5432/rag
+    volumes:
+      # Same live corpus the API serves (incl. /upload additions) so a pgvector
+      # eval re-ingests them instead of dropping them -- matches the api mount.
+      - ./data:/app/data
+      - ./eval/results:/app/eval/results
 
 volumes:
   pgdata:

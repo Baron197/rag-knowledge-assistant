@@ -24,6 +24,9 @@ eval/results/
 # ruff
 .ruff_cache/
 
+# Streamlit secrets (config.toml is committed; secrets are not)
+.streamlit/secrets.toml
+
 # Personal docs / study material (kept local, not published).
 # Anchored to the repo root so it never matches the data/docs corpus.
 /docs/

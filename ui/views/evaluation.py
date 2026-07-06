@@ -24,6 +24,7 @@ from common import API_URL, get_health, invalidate_cache
 
 SEMANTIC = ("openai", "hf")   # embedding tiers for which refusal/Ragas are meaningful
 
+common.require_auth()  # gate behind APP_PASSWORD (no-op when unset)
 common.use_wide()
 common.render_header()
 st.markdown("### :material/verified: Model evaluation")

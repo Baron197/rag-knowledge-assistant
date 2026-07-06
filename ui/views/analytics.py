@@ -26,6 +26,7 @@ from common import API_URL, get_health, invalidate_cache
 
 REFUSAL_MARKER = "don't have enough information"
 
+common.require_auth()  # gate behind APP_PASSWORD (no-op when unset)
 common.use_wide()   # data-dense dashboard -> widen past the chat reading column
 common.render_header()
 st.markdown("### :material/monitoring: Query analytics")

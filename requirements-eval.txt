@@ -1,0 +1,23 @@
+# Dependencies for the evaluation harness (see Dockerfile.eval).
+# The RAG pipeline + Ragas generation metrics -- leaner than requirements.txt
+# (no API/UI server libs). Keep versions in sync with requirements.txt.
+
+# Core pipeline
+pydantic>=2.6
+pydantic-settings>=2.2
+python-dotenv>=1.0
+numpy>=1.26
+tiktoken>=0.7
+openai>=1.30
+
+# Document loading (ingest)
+pypdf>=4.2
+beautifulsoup4>=4.12
+
+# pgvector backend (eval connects to the same Postgres as the API)
+psycopg[binary]>=3.1
+pgvector>=0.2.5
+
+# Generation-quality metrics (pulls datasets/pandas transitively)
+ragas>=0.1.9,<0.2
+datasets>=2.19

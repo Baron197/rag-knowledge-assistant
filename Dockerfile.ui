@@ -1,0 +1,22 @@
+# Thin Streamlit UI image -- a client over the API. It needs no RAG/ML stack,
+# just Streamlit + the libraries the dashboards use, so the image stays small.
+FROM python:3.11-slim
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir "streamlit>=1.36" "requests>=2.31" "pandas>=2.0"
+
+COPY ui/ ./ui/
+# The app's light/dark theming is layered on Streamlit's base theme, which this
+# config sets (base=light + palette). Without it the container falls back to
+# Streamlit's default theme and the UI renders wrong (washed-out sidebar, etc.).
+COPY .streamlit/config.toml ./.streamlit/config.toml
+
+# Where the UI finds the API. On the docker-compose network the API service is
+# reachable at http://api:8000 (override with RAG_API_URL for other setups).
+ENV RAG_API_URL=http://api:8000
+EXPOSE 8501
+
+CMD ["streamlit", "run", "ui/streamlit_app.py", \
+     "--server.port", "8501", "--server.address", "0.0.0.0", \
+     "--server.headless", "true", "--browser.gatherUsageStats", "false"]
