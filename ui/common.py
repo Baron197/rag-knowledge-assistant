@@ -195,8 +195,9 @@ input::placeholder, textarea::placeholder{
 [data-testid="stChatInput"], [data-testid="stChatInput"] div{ background:var(--surface) !important; }
 [data-testid="stChatInput"] textarea{ background:var(--surface) !important; color:var(--ink) !important; }
 
-/* Inline `code` in markdown/captions (was on a light chip). */
-.stMarkdown code, [data-testid="stCaptionContainer"] code{
+/* Inline `code` in markdown/captions/expander headers (was on a light chip). */
+.stMarkdown code, [data-testid="stCaptionContainer"] code,
+[data-testid="stExpander"] summary code{
   background:var(--surface-2) !important; color:var(--body) !important; }
 
 /* Bordered containers, expanders, chat bubbles, uploader */
@@ -231,11 +232,18 @@ hr{ border-color:var(--border) !important; }
 [data-testid="stSelectboxVirtualDropdown"],
 [data-baseweb="popover"] [role="listbox"]{
   background:var(--surface) !important; border:1px solid var(--border) !important; }
-[data-baseweb="popover"] [role="option"]{
-  background:var(--surface) !important; color:var(--ink) !important; }
-[data-baseweb="popover"] [role="option"] *{ color:var(--ink) !important; }
+/* Option TEXT: the virtualised dropdown's options are NOT under [data-baseweb="popover"],
+   so also colour everything inside stSelectboxVirtualDropdown -- else the option labels
+   keep the light base theme's dark ink and vanish on the dark panel. */
+[data-baseweb="popover"] [role="option"],
+[data-baseweb="popover"] [role="option"] *,
+[data-testid="stSelectboxVirtualDropdown"],
+[data-testid="stSelectboxVirtualDropdown"] *{ color:var(--ink) !important; }
+[data-baseweb="popover"] [role="option"]{ background:var(--surface) !important; }
 [data-baseweb="popover"] [role="option"]:hover,
-[data-baseweb="popover"] [role="option"][aria-selected="true"]{
+[data-baseweb="popover"] [role="option"][aria-selected="true"],
+[data-testid="stSelectboxVirtualDropdown"] [role="option"]:hover,
+[data-testid="stSelectboxVirtualDropdown"] [role="option"][aria-selected="true"]{
   background:var(--surface-2) !important; }
 
 /* Help tooltips: also portalled outside .stApp on the light base theme. */
