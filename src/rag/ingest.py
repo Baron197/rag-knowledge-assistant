@@ -36,8 +36,11 @@ def _read_file(path: Path) -> str:
     if suffix == ".pdf":
         from pypdf import PdfReader
 
-        reader = PdfReader(str(path))
-        return "\n".join(page.extract_text() or "" for page in reader.pages)
+        try:
+            reader = PdfReader(str(path))
+            return "\n".join(page.extract_text() or "" for page in reader.pages)
+        except Exception:  # noqa: BLE001 -- a corrupt/non-PDF .pdf must not break ingest or the viewer
+            return ""
     return ""
 
 

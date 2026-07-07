@@ -302,7 +302,9 @@ def documents() -> dict:
         counts[d.source] = counts.get(d.source, 0) + 1
     items: list[dict] = []
     if docs_dir.exists():
-        for path in sorted(docs_dir.rglob("*")):
+        # glob (top-level), not rglob: /documents/{name} resolves names top-level, so
+        # only list files it can actually serve (a nested file would list then 404).
+        for path in sorted(docs_dir.glob("*")):
             if path.is_file() and path.suffix.lower() in ALLOWED_SUFFIXES:
                 try:
                     size = path.stat().st_size
