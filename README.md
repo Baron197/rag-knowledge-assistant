@@ -237,17 +237,25 @@ MIN_RELEVANCE_SCORE=0.25        # optional hallucination guard (vector mode)
 Then `python -m src.rag.ingest --reset` and run as above. `make eval` now
 produces real faithfulness / refusal numbers.
 
-## Run in Docker
+## Run in Docker & deploy
+
+The full stack — Postgres + `pgvector`, the API, and the Streamlit UI — comes up
+with one command, identically on your laptop or a single cloud VM:
 
 ```bash
-docker compose up --build api   # API at http://localhost:8000 (keyless by default)
-# or just the production database:
-make db-up                      # Postgres + pgvector; set VECTOR_BACKEND=pgvector
+docker compose up -d --build     # db + api + ui   (UI :8501 · API :8000)
+docker compose run --rm eval     # optional: populate the Evaluation page (Ragas included)
 ```
 
-The application code is unchanged across backends — `numpy` and `pgvector`
-implement the same `VectorStore` interface (Chroma / Qdrant would slot in
-identically).
+For a real deployment put `LLM_PROVIDER=openai`, `EMBEDDING_PROVIDER=openai`,
+`VECTOR_BACKEND=pgvector` and `OPENAI_API_KEY` in `.env`; set `APP_PASSWORD` (UI
+login) and `API_KEY` (gates `/query`, `/ingest`, `/upload`) to protect a public host.
+
+It fits a **free-tier VM** — Google Cloud Always-Free `e2-micro`, or Oracle Cloud
+Always-Free Ampere **A1** (2 vCPU / 12 GB — enough for the stack *plus* the Ragas
+eval, no swap needed). The app code is unchanged across backends: `numpy` and
+`pgvector` implement the same `VectorStore` interface (Chroma / Qdrant would slot
+in identically).
 
 ## Evaluation
 
