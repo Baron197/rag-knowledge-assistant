@@ -8,6 +8,7 @@ Endpoints:
   GET  /metrics   -> aggregate cost/latency/throughput from traces
   GET  /analytics -> per-query trace records for the analytics dashboard
   GET  /eval-results -> evaluation reports (retrieval/Ragas/A-B) for the eval dashboard
+  GET  /documents -> the indexed source corpus (files + chunks) for the Corpus page
 
 The pipeline is built once and reused, so the API is the single source of truth
 that both the Streamlit UI and the eval harness can call. Request bodies are
@@ -28,7 +29,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from .config import get_settings
-from .ingest import ingest
+from .ingest import _read_file, ingest
 from .pipeline import RAGPipeline
 
 logger = logging.getLogger("rag.api")
@@ -285,4 +286,60 @@ def eval_results(limit: int = 50) -> dict:
         "results_dir": str(results_dir),
         "eval_runs": evals[:limit],
         "compare_runs": compares[:limit],
+    }
+
+
+@app.get("/documents")
+def documents() -> dict:
+    """List the source documents the index was built from -- filename, type, size,
+    and how many chunks each produced in the vector store. Read-only; the corpus is
+    changed via /ingest and /upload."""
+    p = get_pipeline()
+    docs_dir = Path(p.settings.docs_dir)
+    # Chunk counts come straight from the vector store -- the actual indexed state.
+    counts: dict[str, int] = {}
+    for d in p.store.all_docs():
+        counts[d.source] = counts.get(d.source, 0) + 1
+    items: list[dict] = []
+    if docs_dir.exists():
+        for path in sorted(docs_dir.rglob("*")):
+            if path.is_file() and path.suffix.lower() in ALLOWED_SUFFIXES:
+                try:
+                    size = path.stat().st_size
+                except OSError:
+                    size = 0
+                items.append({
+                    "name": path.name,
+                    "suffix": path.suffix.lower().lstrip("."),
+                    "size_bytes": size,
+                    "chunks": counts.get(path.name, 0),
+                })
+    return {"docs_dir": str(docs_dir), "total_chunks": p.store.count(), "documents": items}
+
+
+@app.get("/documents/{name}")
+def document(name: str) -> dict:
+    """Return one source document: the full text the ingester extracted from it
+    (what got chunked + embedded) plus the chunks the vector store holds for it."""
+    p = get_pipeline()
+    safe = Path(name).name  # strip any directory components (path-traversal guard)
+    path = Path(p.settings.docs_dir) / safe
+    if safe != name or not path.is_file() or path.suffix.lower() not in ALLOWED_SUFFIXES:
+        raise HTTPException(status_code=404, detail=f"Document not found: {name}")
+    text = _read_file(path)  # md/txt raw, html stripped, pdf extracted -- as ingested
+    chunks = sorted(
+        (d for d in p.store.all_docs() if d.source == safe), key=lambda d: d.chunk_index
+    )
+    try:
+        size = path.stat().st_size
+    except OSError:
+        size = 0
+    return {
+        "name": safe,
+        "suffix": path.suffix.lower().lstrip("."),
+        "size_bytes": size,
+        "chars": len(text),
+        "n_chunks": len(chunks),
+        "text": text,
+        "chunks": [{"index": d.chunk_index, "id": d.id, "text": d.text} for d in chunks],
     }

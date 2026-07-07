@@ -1,7 +1,8 @@
 """Streamlit thin client over the FastAPI RAG service -- multipage router.
 
-Four pages share the same session and API:
+Five pages share the same session and API:
   * Ask        (views/chat.py)       -- chat-first grounded Q&A with citations.
+  * Corpus     (views/corpus.py)     -- browse the indexed source documents.
   * Analytics  (views/analytics.py)  -- filterable charts over the query traces.
   * Evaluation (views/evaluation.py) -- read-only view of the eval reports.
   * Guide      (views/guide.py)      -- in-app tutorial: usage + metric meanings.
@@ -33,6 +34,7 @@ common.inject_theme("dark" if st.session_state.dark_mode else "light")
 pages = [
     st.Page("views/guide.py", title="Guide", icon=":material/menu_book:", default=True),
     st.Page("views/chat.py", title="Ask", icon=":material/forum:"),
+    st.Page("views/corpus.py", title="Corpus", icon=":material/folder_open:"),
     st.Page("views/analytics.py", title="Analytics", icon=":material/monitoring:"),
     st.Page("views/evaluation.py", title="Evaluation", icon=":material/verified:"),
 ]
