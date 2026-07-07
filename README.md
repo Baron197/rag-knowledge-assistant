@@ -34,6 +34,24 @@ first-class here.
 
 ---
 
+## Screenshots
+
+*The Streamlit UI is a thin client over the FastAPI service. Shown here in keyless
+`fake` mode; the exact same UI runs on OpenAI or local Hugging Face.*
+
+**Ask** — grounded answers with inline `[n]` citations, a per-query telemetry
+strip (latency split · cost · contexts · tokens), and the retrieved source passages:
+
+[![Ask page — grounded answer with citations and telemetry](assets/screenshots/ask.png)](assets/screenshots/ask.png)
+
+| **Corpus** — browse exactly what the vector DB indexed | **Analytics** — per-query cost / latency / token dashboard |
+|:--:|:--:|
+| [![Corpus page](assets/screenshots/corpus.png)](assets/screenshots/corpus.png) | [![Analytics dashboard](assets/screenshots/analytics.png)](assets/screenshots/analytics.png) |
+| **Evaluation** — retrieval metrics + Ragas faithfulness/relevancy (real OpenAI run) | **Dark mode** — full light / dark theming |
+| [![Evaluation dashboard](assets/screenshots/evaluation.png)](assets/screenshots/evaluation.png) | [![Dark mode](assets/screenshots/ask-dark.png)](assets/screenshots/ask-dark.png) |
+
+---
+
 ## What this project demonstrates
 
 For reviewers, here is the applied-AI engineering signal at a glance:
@@ -143,7 +161,7 @@ plumbing end-to-end):
 | Recall@1 | 0.78 |
 | MRR | 0.87 |
 | Avg cost / query | $0.00 |
-| Tests | 21 / 21 passing |
+| Tests | 24 / 24 passing |
 
 **Retrieval A/B — `make eval-compare`** (vector vs hybrid, keyless run):
 
@@ -268,11 +286,12 @@ src/rag/
   observability.py  per-query traces, token cost, latency aggregation
   pipeline.py       retrieve -> prompt -> generate -> trace (+ LRU cache)
   ingest.py         load -> chunk -> embed -> store (CLI)
-  api.py            FastAPI: /health /ingest /upload /query /metrics /analytics /eval-results
+  api.py            FastAPI: /health /ingest /upload /query /metrics /analytics /eval-results /documents
 ui/
   streamlit_app.py  multipage router (thin client over the API)
   common.py         shared config, styling and API helpers
   views/chat.py     grounded chat with citations + telemetry
+  views/corpus.py    browse the indexed source documents (files + chunks)
   views/analytics.py filterable charts over the query traces
   views/evaluation.py read-only dashboard of the eval reports (retrieval + Ragas + A/B)
   views/guide.py      in-app tutorial: how to use the app + what every metric means
@@ -284,7 +303,7 @@ Dockerfile          containerised API
 
 ## Testing & CI
 
-- **Tests** (`pytest`, 21) run end-to-end on the keyless path — fast,
+- **Tests** (`pytest`, 24) run end-to-end on the keyless path — fast,
   deterministic, no network or API key.
 - **Lint** (`ruff`) enforces style and import hygiene.
 - **CI** (GitHub Actions) lints, runs the tests, then runs the evaluation as a
