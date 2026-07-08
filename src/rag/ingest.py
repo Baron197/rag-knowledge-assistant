@@ -46,13 +46,20 @@ def _read_file(path: Path) -> str:
 
 def load_documents(docs_dir: Path) -> list[tuple[str, str]]:
     """Walk `docs_dir` recursively and return [(source_name, text), ...] for every
-    supported, non-empty file."""
+    supported, non-empty file.
+
+    The source name is the path *relative* to `docs_dir` (POSIX-style), so two
+    files sharing a basename in different subfolders (``a/intro.md`` and
+    ``b/intro.md``) get distinct chunk ids instead of silently colliding. For the
+    common flat corpus this is just the filename, so nothing changes there.
+    """
+    docs_dir = Path(docs_dir)
     docs: list[tuple[str, str]] = []
-    for path in sorted(Path(docs_dir).rglob("*")):
+    for path in sorted(docs_dir.rglob("*")):
         if path.is_file() and path.suffix.lower() in {".md", ".txt", ".html", ".htm", ".pdf"}:
             text = _read_file(path).strip()
             if text:
-                docs.append((path.name, text))
+                docs.append((path.relative_to(docs_dir).as_posix(), text))
     return docs
 
 

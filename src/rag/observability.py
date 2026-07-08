@@ -105,7 +105,8 @@ class Tracer:
         return rows
 
     def records(self, limit: int | None = None) -> list[dict[str, Any]]:
-        """Return recorded traces (most recent `limit`, or all) for the analytics API."""
+        """Return the most recent `limit` traces (oldest-first within that window),
+        or all recorded traces when `limit` is None, for the analytics API."""
         rows = self._read_rows()
         if limit is not None and limit >= 0:
             # Last `limit` traces (or ALL when limit >= len); limit=0 -> []. A

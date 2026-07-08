@@ -17,6 +17,7 @@ HTTP 500s instead of leaking stack traces.
 """
 from __future__ import annotations
 
+import hmac
 import json
 import logging
 import threading
@@ -41,6 +42,17 @@ app = FastAPI(title="RAG Knowledge Assistant", version="0.3.0")
 # construction and reset could otherwise race.
 _pipeline: RAGPipeline | None = None
 _pipeline_lock = threading.Lock()
+# Serialises index rebuilds: /ingest and /upload both call ingest(), which clears
+# and rewrites the on-disk store. Two overlapping rebuilds could interleave writes
+# and leave the vectors matrix inconsistent with the metadata, so only one runs at
+# a time.
+_ingest_lock = threading.Lock()
+
+
+def _locked_ingest(reset: bool = True) -> int:
+    """Run one index rebuild under `_ingest_lock` so concurrent rebuilds can't race."""
+    with _ingest_lock:
+        return ingest(reset=reset)
 
 # Document types the ingestion pipeline knows how to read (see ingest._read_file).
 ALLOWED_SUFFIXES = {".md", ".txt", ".html", ".htm", ".pdf"}
@@ -134,7 +146,7 @@ def require_api_key(x_api_key: Annotated[str | None, Header()] = None) -> None:
     unchanged. When set, requests must carry a matching `X-API-Key` header;
     otherwise 401. Read-only endpoints and /health stay open."""
     expected = get_settings().api_key
-    if expected and x_api_key != expected:
+    if expected and not hmac.compare_digest(x_api_key or "", expected):
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 
@@ -143,7 +155,7 @@ def run_ingest(reset: bool = True) -> dict:
     """(Re)build the index from DOCS_DIR, then drop the cached pipeline so the next
     request sees the refreshed store."""
     try:
-        n = ingest(reset=reset)
+        n = _locked_ingest(reset=reset)
     except Exception as exc:  # noqa: BLE001
         logger.exception("ingestion failed")
         raise HTTPException(status_code=500, detail=f"Ingestion failed: {exc}") from exc
@@ -190,7 +202,7 @@ async def upload(files: Annotated[list[UploadFile], File(...)]) -> dict:
         # This handler is async (for `await f.read`), so the synchronous,
         # potentially slow ingest must run in the threadpool -- running it
         # inline would stall the event loop and freeze every other endpoint.
-        n = await run_in_threadpool(ingest, reset=True)
+        n = await run_in_threadpool(_locked_ingest, reset=True)
     except Exception as exc:  # noqa: BLE001
         logger.exception("ingestion after upload failed")
         raise HTTPException(status_code=500, detail=f"Ingestion failed: {exc}") from exc
@@ -228,8 +240,9 @@ def metrics() -> dict:
 
 @app.get("/analytics")
 def analytics(limit: int = 2000) -> dict:
-    """Per-query trace records (most recent first bounded by `limit`) for the
-    analytics dashboard: timings, tokens, cost, contexts and sources per query.
+    """Per-query trace records — the most recent `limit`, in oldest-first order
+    within that window — for the analytics dashboard: timings, tokens, cost,
+    contexts and sources per query.
 
     Only uncached queries are traced (cache hits are intentionally not recorded),
     so this reflects real retrieval/generation work — the same rows `/metrics`

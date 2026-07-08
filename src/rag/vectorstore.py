@@ -19,7 +19,7 @@ rebuilding the index.
 from __future__ import annotations
 
 import json
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from pathlib import Path
 from typing import Protocol
 
@@ -99,7 +99,10 @@ class NumpyVectorStore:
         self._dim = meta.get("dim") if isinstance(meta, dict) else None
         if docs and self._vec_path.exists():
             self._vectors = np.load(self._vec_path)
-            self._docs = [Doc(**d) for d in docs]
+            # Only splat keys Doc actually declares, so a meta.json written by a
+            # future/extended schema can't crash index load with a TypeError.
+            _doc_fields = {f.name for f in fields(Doc)}
+            self._docs = [Doc(**{k: v for k, v in d.items() if k in _doc_fields}) for d in docs]
             if self._dim is None and self._vectors is not None:
                 self._dim = int(self._vectors.shape[1])
 

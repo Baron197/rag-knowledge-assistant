@@ -47,7 +47,10 @@ class FakeLLM:
 
     def complete(self, system: str, user: str) -> LLMResult:
         """Return a grounded stand-in answer, or the refusal sentence if no context."""
-        has_context = "(no relevant context found)" not in user
+        # Match the full "no context" block emitted by build_user_prompt, not a
+        # bare substring — otherwise a question or a retrieved passage that happens
+        # to contain this phrase would spuriously trigger the refusal path.
+        has_context = "Context passages:\n\n(no relevant context found)\n\n" not in user
         if not has_context:
             text = "I don't have enough information in the documentation to answer that."
         else:

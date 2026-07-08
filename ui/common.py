@@ -8,6 +8,7 @@ one variable block (plus a few overrides for Streamlit's own chrome in dark mode
 """
 from __future__ import annotations
 
+import hmac
 import html
 import os
 
@@ -391,7 +392,7 @@ def require_auth() -> None:
         pw = st.text_input("Password", type="password", placeholder="Access password")
         submitted = st.form_submit_button("Sign in", type="primary")
     if submitted:
-        if pw == APP_PASSWORD:
+        if hmac.compare_digest(pw, APP_PASSWORD):
             st.session_state.authed = True
             st.rerun()
         else:
