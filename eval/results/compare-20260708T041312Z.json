@@ -1,0 +1,29 @@
+{
+  "timestamp": "20260708T041312Z",
+  "providers": {
+    "embedding": "openai",
+    "top_k": 4
+  },
+  "results": {
+    "vector": {
+      "context_recall_at_k": 1.0,
+      "recall_at_1": 1.0,
+      "mrr": 1.0,
+      "refusal_accuracy": 1.0,
+      "answerable_questions": 23,
+      "refusal_questions": 5,
+      "avg_cost_usd": 0.00023291,
+      "avg_latency_ms": 1978.5
+    },
+    "hybrid": {
+      "context_recall_at_k": 1.0,
+      "recall_at_1": 0.957,
+      "mrr": 0.978,
+      "refusal_accuracy": 1.0,
+      "answerable_questions": 23,
+      "refusal_questions": 5,
+      "avg_cost_usd": 0.00023218,
+      "avg_latency_ms": 1914.8
+    }
+  }
+}

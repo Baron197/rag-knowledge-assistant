@@ -1,0 +1,557 @@
+{
+  "timestamp": "20260705T085510Z",
+  "providers": {
+    "llm": "openai",
+    "embedding": "openai",
+    "vector_backend": "pgvector",
+    "retrieval_mode": "hybrid",
+    "top_k": 4
+  },
+  "retrieval_metrics": {
+    "context_recall_at_k": 1.0,
+    "recall_at_1": 0.957,
+    "mrr": 0.978,
+    "refusal_accuracy": 1.0,
+    "answerable_questions": 23,
+    "refusal_questions": 5,
+    "avg_cost_usd": 0.00023206,
+    "avg_latency_ms": 1922.9
+  },
+  "ragas_metrics": {
+    "faithfulness": 0.965,
+    "answer_relevancy": 0.961,
+    "context_precision": 0.964,
+    "context_recall": 1.0
+  },
+  "per_question": [
+    {
+      "question": "How do I send my first message with Nimbus?",
+      "answer": "To send your first message with Nimbus, follow these steps:\n\n1. Open the dashboard and copy your **test** API key from **Settings \u2192 API Keys**.\n2. Make a POST request to `https://api.nimbus.dev/v1/messages` with the key in the `Authorization` header.\n3. Include the `channel`, `to`, and `body` fields in the JSON request.\n\nA successful request will return HTTP `202 Accepted` with a `message_id` that you can use to track delivery. Note that messages sent with a test key will appear in the **Logs** tab but will not be delivered to real recipients [1].",
+      "ground_truth": "Copy your test API key from Settings -> API Keys, then POST to https://api.nimbus.dev/v1/messages with the key in the Authorization header and channel, to, and body fields in the JSON.",
+      "expected_sources": [
+        "01-getting-started.md"
+      ],
+      "retrieved_sources": [
+        "01-getting-started.md",
+        "04-webhooks.md",
+        "06-troubleshooting.md",
+        "03-rate-limits.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00027995,
+      "latency_ms": 3487.6
+    },
+    {
+      "question": "What does the Free plan include?",
+      "answer": "The Free plan includes 1,000 messages per month at no cost and community support [2].",
+      "ground_truth": "The Free plan is $0/month and includes 1,000 messages per month with community support.",
+      "expected_sources": [
+        "01-getting-started.md",
+        "05-billing-plans.md"
+      ],
+      "retrieved_sources": [
+        "01-getting-started.md",
+        "05-billing-plans.md",
+        "03-rate-limits.md",
+        "06-troubleshooting.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00022004,
+      "latency_ms": 2626.7
+    },
+    {
+      "question": "How do I rotate a leaked API key?",
+      "answer": "To rotate a leaked API key, follow these steps:\n\n1. Create a new API key.\n2. Deploy the new key in your application.\n3. Delete the old key from **Settings \u2192 API Keys**. This deletion takes effect immediately, and any requests using the old key afterward will return `401 Unauthorized` [1]. \n\nIf you believe a key has been exposed, it is crucial to delete it and create a replacement, as there is no \"reset\" option that keeps the same key string [1].",
+      "ground_truth": "Create a new key, deploy it, then delete the old key from Settings -> API Keys. Deletion is immediate; there is no reset that keeps the same string.",
+      "expected_sources": [
+        "02-authentication.md"
+      ],
+      "retrieved_sources": [
+        "02-authentication.md",
+        "06-troubleshooting.md",
+        "01-getting-started.md",
+        "03-rate-limits.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00027258,
+      "latency_ms": 2831.1
+    },
+    {
+      "question": "What HTTP status is returned when a request has no valid API key?",
+      "answer": "HTTP `401 Unauthorized` is returned when a request has no valid API key [1].",
+      "ground_truth": "HTTP 401 Unauthorized.",
+      "expected_sources": [
+        "02-authentication.md",
+        "06-troubleshooting.md"
+      ],
+      "retrieved_sources": [
+        "02-authentication.md",
+        "06-troubleshooting.md",
+        "03-rate-limits.md",
+        "01-getting-started.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00022183,
+      "latency_ms": 1741.2
+    },
+    {
+      "question": "What is the difference between test and live keys?",
+      "answer": "Test keys (`nk_test_\u2026`) operate in sandbox mode, meaning requests are validated and logged, but no messages are delivered. They are intended for development and continuous integration (CI) purposes. In contrast, live keys (`nk_live_\u2026`) send real messages and count against your plan quota and billing. To send messages to real recipients, you must switch from a test key to a live key and ensure your account email is verified [1].",
+      "ground_truth": "Test keys (nk_test_) run in sandbox mode and are logged but not delivered; live keys (nk_live_) send real messages and count against quota and billing.",
+      "expected_sources": [
+        "02-authentication.md"
+      ],
+      "retrieved_sources": [
+        "02-authentication.md",
+        "06-troubleshooting.md",
+        "01-getting-started.md",
+        "04-webhooks.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.0002624,
+      "latency_ms": 3105.5
+    },
+    {
+      "question": "What is the per-second rate limit on the Growth plan?",
+      "answer": "The per-second rate limit on the Growth plan is 50 requests per second [1].",
+      "ground_truth": "50 requests per second.",
+      "expected_sources": [
+        "03-rate-limits.md"
+      ],
+      "retrieved_sources": [
+        "03-rate-limits.md",
+        "05-billing-plans.md",
+        "06-troubleshooting.md",
+        "01-getting-started.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00021969,
+      "latency_ms": 1717.9
+    },
+    {
+      "question": "How should clients handle a 429 response?",
+      "answer": "Clients should handle a 429 response by respecting the `Retry-After` header and backing off exponentially before retrying the request. It is important to note that messages that receive a 429 response are not queued, so clients must resend them manually [1], [2].",
+      "ground_truth": "Respect the Retry-After header and back off exponentially before retrying. Messages that get a 429 are not queued and must be resent.",
+      "expected_sources": [
+        "03-rate-limits.md",
+        "06-troubleshooting.md"
+      ],
+      "retrieved_sources": [
+        "03-rate-limits.md",
+        "06-troubleshooting.md",
+        "05-billing-plans.md",
+        "02-authentication.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00023913,
+      "latency_ms": 2712.4
+    },
+    {
+      "question": "Which rate-limit headers does Nimbus return?",
+      "answer": "Nimbus returns the following rate-limit headers in every response: \n- `X-RateLimit-Limit` \u2014 your current per-second ceiling.\n- `X-RateLimit-Remaining` \u2014 requests left in the current window.\n- `X-RateLimit-Reset` \u2014 seconds until the window resets [1].",
+      "ground_truth": "X-RateLimit-Limit, X-RateLimit-Remaining, and X-RateLimit-Reset.",
+      "expected_sources": [
+        "03-rate-limits.md"
+      ],
+      "retrieved_sources": [
+        "03-rate-limits.md",
+        "02-authentication.md",
+        "01-getting-started.md",
+        "04-webhooks.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00024361,
+      "latency_ms": 2535.9
+    },
+    {
+      "question": "What webhook events does Nimbus emit?",
+      "answer": "Nimbus emits the following webhook event types: \n- `message.queued` \u2014 accepted and waiting to send.\n- `message.delivered` \u2014 confirmed delivered to the recipient.\n- `message.bounced` \u2014 permanently failed (for example, invalid address).\n- `message.opened` \u2014 recipient opened the email (email channel only) [1].",
+      "ground_truth": "message.queued, message.delivered, message.bounced, and message.opened.",
+      "expected_sources": [
+        "04-webhooks.md"
+      ],
+      "retrieved_sources": [
+        "04-webhooks.md",
+        "01-getting-started.md",
+        "06-troubleshooting.md",
+        "02-authentication.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00024989,
+      "latency_ms": 2382.8
+    },
+    {
+      "question": "How long does Nimbus retry failed webhook deliveries?",
+      "answer": "Nimbus retries failed webhook deliveries for up to 24 hours with exponential backoff. After 24 hours of failures, the endpoint is automatically disabled and the account owner is emailed [1].",
+      "ground_truth": "It retries with exponential backoff for up to 24 hours, after which the endpoint is automatically disabled and the owner is emailed.",
+      "expected_sources": [
+        "04-webhooks.md"
+      ],
+      "retrieved_sources": [
+        "04-webhooks.md",
+        "03-rate-limits.md",
+        "01-getting-started.md",
+        "06-troubleshooting.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00022278,
+      "latency_ms": 1560.3
+    },
+    {
+      "question": "How do I verify a webhook is really from Nimbus?",
+      "answer": "To verify that a webhook is really from Nimbus, you should check the `X-Nimbus-Signature` header included in each webhook request. This header contains an HMAC-SHA256 signature of the raw request body, which is computed using your webhook signing secret. Always verify this signature before trusting the payload to prevent spoofed events. The signing secret can be found on the Webhooks settings page and can be rotated independently of your API keys [1].",
+      "ground_truth": "Verify the X-Nimbus-Signature header, which is an HMAC-SHA256 of the raw body computed with your webhook signing secret.",
+      "expected_sources": [
+        "04-webhooks.md"
+      ],
+      "retrieved_sources": [
+        "04-webhooks.md",
+        "06-troubleshooting.md",
+        "01-getting-started.md",
+        "02-authentication.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00026377,
+      "latency_ms": 2622.9
+    },
+    {
+      "question": "How much does the Growth plan cost and what are overage charges?",
+      "answer": "The Growth plan costs $49 per month and includes 100,000 messages. If you exceed the included messages, overage charges are $0.40 per 1,000 additional messages, which will be added to your next invoice [1].",
+      "ground_truth": "Growth is $49/month with 100,000 messages included; additional messages cost $0.40 per 1,000.",
+      "expected_sources": [
+        "05-billing-plans.md"
+      ],
+      "retrieved_sources": [
+        "05-billing-plans.md",
+        "03-rate-limits.md",
+        "06-troubleshooting.md",
+        "01-getting-started.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00023923,
+      "latency_ms": 2168.7
+    },
+    {
+      "question": "How is message usage counted when one request has many recipients?",
+      "answer": "One outbound message to one recipient counts as one message, regardless of the channel. If a single API request sends messages to multiple recipients, such as 50 recipients, it counts as 50 messages [1].",
+      "ground_truth": "Each recipient counts as one message, so a request fanning out to 50 recipients counts as 50 messages. Test-key messages are never billed.",
+      "expected_sources": [
+        "05-billing-plans.md"
+      ],
+      "retrieved_sources": [
+        "05-billing-plans.md",
+        "03-rate-limits.md",
+        "01-getting-started.md",
+        "06-troubleshooting.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00023409,
+      "latency_ms": 1727.7
+    },
+    {
+      "question": "What happens when I hit my monthly spend cap?",
+      "answer": "When you hit your monthly spend cap, further live sends will return HTTP `402 Payment Required` until the next billing cycle or until you raise the cap. You can raise or remove the cap under **Settings \u2192 Billing** [1], [2].",
+      "ground_truth": "Live sends return HTTP 402 Payment Required until the next billing cycle or until you raise the cap.",
+      "expected_sources": [
+        "05-billing-plans.md",
+        "06-troubleshooting.md"
+      ],
+      "retrieved_sources": [
+        "05-billing-plans.md",
+        "06-troubleshooting.md",
+        "03-rate-limits.md",
+        "01-getting-started.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00023855,
+      "latency_ms": 1685.7
+    },
+    {
+      "question": "Why are my messages not being delivered?",
+      "answer": "Your messages are not being delivered because you may be using a **test** key, which logs messages in the **Logs** tab but never delivers them. To resolve this, switch to a **live** key and ensure your account email is verified [1], [2].",
+      "ground_truth": "You are likely using a test key, which logs messages but never delivers them. Switch to a live key and verify your account email.",
+      "expected_sources": [
+        "01-getting-started.md",
+        "06-troubleshooting.md"
+      ],
+      "retrieved_sources": [
+        "06-troubleshooting.md",
+        "01-getting-started.md",
+        "03-rate-limits.md",
+        "04-webhooks.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00023341,
+      "latency_ms": 2038.2
+    },
+    {
+      "question": "Do downgrades take effect immediately?",
+      "answer": "No, downgrades take effect at the start of your next billing cycle, so you keep paid features until then [1].",
+      "ground_truth": "No. Downgrades take effect at the start of the next billing cycle, while upgrades take effect immediately and are prorated.",
+      "expected_sources": [
+        "05-billing-plans.md"
+      ],
+      "retrieved_sources": [
+        "05-billing-plans.md",
+        "02-authentication.md",
+        "06-troubleshooting.md",
+        "03-rate-limits.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00022154,
+      "latency_ms": 1419.5
+    },
+    {
+      "question": "Are messages sent with a test key delivered to real recipients?",
+      "answer": "No, messages sent with a test key are never delivered to real recipients. They are logged but not delivered, operating in sandbox mode [1], [3].",
+      "ground_truth": "No. Test-key messages appear in the Logs tab but are never delivered.",
+      "expected_sources": [
+        "01-getting-started.md",
+        "02-authentication.md"
+      ],
+      "retrieved_sources": [
+        "01-getting-started.md",
+        "06-troubleshooting.md",
+        "02-authentication.md",
+        "05-billing-plans.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00023574,
+      "latency_ms": 1462.1
+    },
+    {
+      "question": "What response code does a successful send return?",
+      "answer": "A successful send returns HTTP `202 Accepted` with a `message_id` you can use to track delivery [1].",
+      "ground_truth": "HTTP 202 Accepted, with a message_id for tracking.",
+      "expected_sources": [
+        "01-getting-started.md"
+      ],
+      "retrieved_sources": [
+        "01-getting-started.md",
+        "03-rate-limits.md",
+        "06-troubleshooting.md",
+        "02-authentication.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00022458,
+      "latency_ms": 1357.2
+    },
+    {
+      "question": "Can I restrict an API key to only the email channel?",
+      "answer": "Yes, you can restrict an API key to only the email channel by using scoped keys. Scoped keys can be limited to specific channels to reduce the blast radius of any potential issues [2].",
+      "ground_truth": "Yes. Nimbus supports scoped keys that can be restricted to specific channels, such as email only.",
+      "expected_sources": [
+        "02-authentication.md"
+      ],
+      "retrieved_sources": [
+        "06-troubleshooting.md",
+        "02-authentication.md",
+        "01-getting-started.md",
+        "04-webhooks.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 2,
+      "cost_usd": 0.00023154,
+      "latency_ms": 1863.5
+    },
+    {
+      "question": "Why are email opens not being tracked?",
+      "answer": "Email opens are not being tracked because open tracking is only available on the email channel and requires the recipient to load images. If the email is plain-text or if the recipient has images disabled, it will not generate `message.opened` events [1].",
+      "ground_truth": "Open tracking is email-only and requires the recipient to load images; plain-text emails or blocked images produce no message.opened events.",
+      "expected_sources": [
+        "04-webhooks.md",
+        "06-troubleshooting.md"
+      ],
+      "retrieved_sources": [
+        "06-troubleshooting.md",
+        "01-getting-started.md",
+        "04-webhooks.md",
+        "03-rate-limits.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00023101,
+      "latency_ms": 1788.8
+    },
+    {
+      "question": "What rate-limiting algorithm does Nimbus use?",
+      "answer": "Nimbus uses a token-bucket algorithm for rate limiting, which allows for short bursts above the per-second rate as long as the average stays within budget [1].",
+      "ground_truth": "A token-bucket algorithm, which tolerates short bursts as long as the average stays within budget.",
+      "expected_sources": [
+        "03-rate-limits.md"
+      ],
+      "retrieved_sources": [
+        "03-rate-limits.md",
+        "02-authentication.md",
+        "01-getting-started.md",
+        "04-webhooks.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00022533,
+      "latency_ms": 1467.7
+    },
+    {
+      "question": "How quickly must my webhook endpoint respond?",
+      "answer": "Your webhook endpoint must respond with HTTP `200` within 5 seconds; otherwise, the delivery is considered failed [1].",
+      "ground_truth": "It must return HTTP 200 within 5 seconds, otherwise the delivery is treated as failed.",
+      "expected_sources": [
+        "04-webhooks.md"
+      ],
+      "retrieved_sources": [
+        "04-webhooks.md",
+        "06-troubleshooting.md",
+        "03-rate-limits.md",
+        "01-getting-started.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00021541,
+      "latency_ms": 1611.4
+    },
+    {
+      "question": "What is the uptime SLA on the Scale plan?",
+      "answer": "The uptime SLA on the Scale plan is 99.95% [1].",
+      "ground_truth": "99.95% uptime.",
+      "expected_sources": [
+        "05-billing-plans.md"
+      ],
+      "retrieved_sources": [
+        "05-billing-plans.md",
+        "03-rate-limits.md",
+        "02-authentication.md",
+        "06-troubleshooting.md"
+      ],
+      "refusal_question": false,
+      "correct": true,
+      "first_relevant_rank": 1,
+      "cost_usd": 0.00021592,
+      "latency_ms": 1272.3
+    },
+    {
+      "question": "What does Nimbus integrate with Salesforce for CRM sync?",
+      "answer": "I don't have enough information in the documentation to answer that.",
+      "ground_truth": "I don't have enough information in the documentation to answer that.",
+      "expected_sources": [],
+      "retrieved_sources": [
+        "04-webhooks.md",
+        "01-getting-started.md",
+        "02-authentication.md",
+        "03-rate-limits.md"
+      ],
+      "refusal_question": true,
+      "correct": true,
+      "first_relevant_rank": null,
+      "cost_usd": 0.00021335,
+      "latency_ms": 1312.3
+    },
+    {
+      "question": "What is the CEO of Nimbus's phone number?",
+      "answer": "I don't have enough information in the documentation to answer that.",
+      "ground_truth": "I don't have enough information in the documentation to answer that.",
+      "expected_sources": [],
+      "retrieved_sources": [
+        "04-webhooks.md",
+        "01-getting-started.md",
+        "06-troubleshooting.md",
+        "05-billing-plans.md"
+      ],
+      "refusal_question": true,
+      "correct": true,
+      "first_relevant_rank": null,
+      "cost_usd": 0.0002138,
+      "latency_ms": 1423.3
+    },
+    {
+      "question": "Where are Nimbus's data centers located?",
+      "answer": "I don't have enough information in the documentation to answer that.",
+      "ground_truth": "I don't have enough information in the documentation to answer that.",
+      "expected_sources": [],
+      "retrieved_sources": [
+        "01-getting-started.md",
+        "04-webhooks.md",
+        "03-rate-limits.md",
+        "06-troubleshooting.md"
+      ],
+      "refusal_question": true,
+      "correct": true,
+      "first_relevant_rank": null,
+      "cost_usd": 0.00020761,
+      "latency_ms": 1372.6
+    },
+    {
+      "question": "Does Nimbus provide an official Python SDK?",
+      "answer": "I don't have enough information in the documentation to answer that.",
+      "ground_truth": "I don't have enough information in the documentation to answer that.",
+      "expected_sources": [],
+      "retrieved_sources": [
+        "04-webhooks.md",
+        "01-getting-started.md",
+        "02-authentication.md",
+        "03-rate-limits.md"
+      ],
+      "refusal_question": true,
+      "correct": true,
+      "first_relevant_rank": null,
+      "cost_usd": 0.00021301,
+      "latency_ms": 1326.1
+    },
+    {
+      "question": "How do I integrate Nimbus with Zapier?",
+      "answer": "I don't have enough information in the documentation to answer that.",
+      "ground_truth": "I don't have enough information in the documentation to answer that.",
+      "expected_sources": [],
+      "retrieved_sources": [
+        "01-getting-started.md",
+        "06-troubleshooting.md",
+        "04-webhooks.md",
+        "03-rate-limits.md"
+      ],
+      "refusal_question": true,
+      "correct": true,
+      "first_relevant_rank": null,
+      "cost_usd": 0.00020778,
+      "latency_ms": 1218.6
+    }
+  ]
+}

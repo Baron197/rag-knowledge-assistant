@@ -2,6 +2,7 @@
 
 > A production-style **Retrieval-Augmented Generation** service that answers questions over a document corpus with **grounded, cited answers**, **hybrid retrieval**, a **built-in evaluation pipeline**, and **cost / latency observability**.
 
+[![CI](https://github.com/Baron197/rag-knowledge-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/Baron197/rag-knowledge-assistant/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white)
 ![OpenAI](https://img.shields.io/badge/LLM-OpenAI-412991?logo=openai&logoColor=white)
@@ -10,10 +11,6 @@
 ![Evaluation](https://img.shields.io/badge/Eval-Ragas%20%2B%20CI%20gate-orange)
 ![Lint](https://img.shields.io/badge/Lint-ruff-000000)
 ![License](https://img.shields.io/badge/License-MIT-green)
-
-<!-- After pushing to GitHub, enable the live CI badge (replace OWNER/REPO):
-![CI](https://github.com/OWNER/REPO/actions/workflows/ci.yml/badge.svg)
--->
 
 This is not a notebook demo. It is the part of RAG that is actually hard in
 production: knowing whether the answers are correct, what they cost, and being
@@ -110,8 +107,6 @@ Q: What is the CEO's phone number?
 A: I don't have enough information in the documentation to answer that.
 ```
 
-<!-- Tip: add a screenshot or a 60–90s Loom of the Streamlit UI here. -->
-
 ## Architecture
 
 ```mermaid
@@ -141,7 +136,7 @@ The interesting engineering is in the choices, not the line count:
 
 | Decision | Why | Trade-off |
 |---|---|---|
-| Hybrid retrieval (vector + BM25, RRF) | Keyword search catches exact tokens (error codes, API names) that embeddings blur; fusion beats either alone | Two retrievers to run; BM25 index built from the corpus |
+| Hybrid retrieval (vector + BM25, RRF) | Keyword search catches exact tokens (error codes, API names) that embeddings blur; fusion helps most where vector recall isn't already at ceiling | Two retrievers to run; on a small clean corpus vector alone can already saturate (see Results) |
 | Hand-written NumPy vector store as default | Zero setup; transparent cosine search; shows what a vector DB does | Not for large corpora → `pgvector` for production |
 | Provider abstractions + keyless `fake` mode | App, tests and CI run with no key and no cost | Fake embeddings are keyword-based, not semantic → quality metrics need a real model |
 | Evaluation wired into CI as a gate | Quality can't silently regress between changes | Requires maintaining a golden set |
@@ -152,31 +147,50 @@ The interesting engineering is in the choices, not the line count:
 
 ## Results
 
-**Latest keyless run** (`fake` providers — validates retrieval, cost & latency
-plumbing end-to-end):
+Two real runs are committed under [`eval/results/`](eval/results/) so these
+numbers are reproducible artifacts, not just screenshots — the keyless run (what
+CI gates) and a real **OpenAI** run.
+
+**Real OpenAI path** — `llm=openai · embedding=openai · pgvector · hybrid · k=4`
+([`eval-20260705T085510Z.md`](eval/results/eval-20260705T085510Z.md)):
+
+| Retrieval | | Generation (Ragas) | |
+|---|---|---|---|
+| Context recall@k (answerable) | **1.0** | faithfulness | **0.965** |
+| Recall@1 | 0.957 | answer_relevancy | 0.961 |
+| MRR | 0.978 | context_precision | 0.964 |
+| Refusal accuracy (out-of-scope) | **1.0** | context_recall | 1.0 |
+
+Averages: **~$0.00023 / query**, ~1.9 s latency.
+
+**Keyless run** (`fake` providers — validates the retrieval / cost / latency
+plumbing end-to-end, offline at $0; this is the run the CI gate enforces):
 
 | Metric | Value |
 |---|---|
-| Context recall@k (answerable) | **1.0** |
+| Context recall@k (answerable) | 1.0 |
 | Recall@1 | 0.78 |
 | MRR | 0.87 |
 | Avg cost / query | $0.00 |
 | Tests | 24 / 24 passing |
 
-**Retrieval A/B — `make eval-compare`** (vector vs hybrid, keyless run):
+**Retrieval A/B — vector vs hybrid** on real OpenAI embeddings (`make eval-compare`
+→ [`compare-20260708T041312Z.md`](eval/results/compare-20260708T041312Z.md)):
 
-| Metric | vector | hybrid |
-|---|---|---|
-| Context recall@k | 1.0 | 1.0 |
-| Recall@1 | 0.78 | 0.78 |
-| MRR | 0.873 | 0.880 |
+| Metric | vector | hybrid | delta |
+|---|---|---|---|
+| Context recall@k | 1.0 | 1.0 | 0.0 |
+| Recall@1 | 1.0 | 0.957 | -0.043 |
+| MRR | 1.0 | 0.978 | -0.022 |
 
-> On this small demo corpus with the keyword-hashing `fake` embedder, the two
-> strategies are close by construction. With real **semantic** embeddings,
-> hybrid's advantage on exact-token queries is larger — run `make eval-compare`
-> with OpenAI configured to measure it on your data. Refusal accuracy and the
-> Ragas generation metrics also require the real path; results land in
-> `eval/results/`.
+> **Honest read:** on this small, well-separated corpus **vector alone already
+> saturates** (Recall@1 = 1.0), so fusing in BM25 can only reshuffle ties — here
+> it slightly dips Recall@1. Hybrid is not a free win on every corpus. Where it
+> earns its keep is **exact-token queries** (error codes, API names, IDs that
+> embeddings blur) and **larger / noisier corpora** where vector recall sits
+> below ceiling. It's one env var (`RETRIEVAL_MODE`), so you measure it on your
+> own data instead of trusting a blanket claim. (On the keyless keyword-hashing
+> embedder the two are near-identical by construction.)
 
 ## Quickstart — no API key, ~2 minutes
 
