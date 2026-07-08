@@ -12,12 +12,16 @@ import common
 import streamlit as st
 from common import CACHE_ICON, WARN_ICON
 
-# Monochrome guide-card marks (16px, currentColor at --body) that echo the four
+# Monochrome guide-card marks (16px, currentColor at --body) that echo the five
 # nav Material Symbols, for the "The pages" cards.
 _GC_ASK = ('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
            'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--body);flex:none">'
            '<path d="M14 9a3 3 0 0 1-3 3H7l-3 2V6a3 3 0 0 1 3-3h4a3 3 0 0 1 3 3Z"/>'
            '<path d="M17 8h1a3 3 0 0 1 3 3v7l-3-2h-4a3 3 0 0 1-3-3"/></svg>')
+_GC_CORPUS = ('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+              'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--body);flex:none">'
+              '<path d="M6 19a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h3l2 2h5a2 2 0 0 1 2 2v1"/>'
+              '<path d="M3.5 10h16.4a1.5 1.5 0 0 1 1.44 1.93l-1.6 5.4A2 2 0 0 1 18 19Z"/></svg>')
 _GC_ANALYTICS = ('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
                  'stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="color:var(--body);flex:none">'
                  '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="m7 14 3-4 3 3 5-6"/></svg>')
@@ -93,7 +97,8 @@ with tabs[0]:
     steps = [
         ("Check the corpus is indexed — the header shows <code>N chunks</code>. If it's "
          "<b>0</b>, open <b>Ask → Documents</b> and click <b>Re-index corpus</b> to load "
-         "the bundled demo docs (or upload your own)."),
+         "the bundled demo docs (or upload your own). Browse what's indexed anytime on the "
+         "<b>Corpus</b> page."),
         ("Go to the <b>Ask</b> page and type a question, or click one of the example "
          "chips. Each answer appears in a chat you can keep scrolling."),
         ("Read the answer: the <b>[1] [2]</b> markers are citations, and the "
@@ -109,6 +114,9 @@ with tabs[0]:
     st.markdown("#### The pages")
     card(f"{_GC_ASK}Ask", "The chat. Ask grounded questions, adjust how many passages are "
                           "retrieved (<code>k</code>), upload documents, and re-index the corpus.")
+    card(f"{_GC_CORPUS}Corpus", "Browse exactly what the vector database indexed — every source "
+                          "file with its type, size and chunk count, plus a viewer showing the "
+                          "extracted text and the individual chunks stored for retrieval.")
     card(f"{_GC_ANALYTICS}Analytics", "Operational dashboard over past queries — cost, latency, "
                           "tokens, and which documents get retrieved most. <i>How is it running?</i>")
     card(f"{_GC_EVAL}Evaluation", "Quality dashboard — retrieval and answer-quality scores against "
