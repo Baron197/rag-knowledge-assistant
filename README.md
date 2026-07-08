@@ -294,7 +294,7 @@ src/rag/
   observability.py  per-query traces, token cost, latency aggregation
   pipeline.py       retrieve -> prompt -> generate -> trace (+ LRU cache)
   ingest.py         load -> chunk -> embed -> store (CLI)
-  api.py            FastAPI: /health /ingest /upload /query /metrics /analytics /eval-results /documents
+  api.py            FastAPI: /health /ingest /upload /query /metrics /analytics /eval-results /documents /documents/{name}
 ui/
   streamlit_app.py  multipage router (thin client over the API)
   common.py         shared config, styling and API helpers
