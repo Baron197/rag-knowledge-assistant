@@ -175,7 +175,7 @@ plumbing end-to-end, offline at $0; this is the run the CI gate enforces):
 | Avg cost / query | $0.00 |
 | Tests | 24 / 24 passing |
 
-**Retrieval A/B — vector vs hybrid** on real OpenAI embeddings (`make eval-compare`
+**Retrieval A/B — vector vs hybrid** on real OpenAI embeddings (`python -m eval.run_eval --compare`
 → [`compare-20260708T041312Z.md`](eval/results/compare-20260708T041312Z.md)):
 
 | Metric | vector | hybrid | delta |
@@ -199,13 +199,20 @@ plumbing end-to-end, offline at $0; this is the run the CI gate enforces):
 pip install -r requirements.txt
 cp .env.example .env            # defaults to the keyless 'fake' providers
 
-python -m src.rag.ingest --reset   # build the index
-make api                        # http://localhost:8000  (interactive docs at /docs)
-make ui                         # http://localhost:8501  (second terminal)
-make test                       # run the test suite
-make lint                       # ruff
-make eval-compare               # vector vs hybrid A/B
+python -m src.rag.ingest --reset                 # build the index
+uvicorn src.rag.api:app --reload --port 8000     # API → http://localhost:8000  (docs at /docs)
+streamlit run ui/streamlit_app.py                # UI  → http://localhost:8501  (second terminal)
+pytest -q                                        # run the test suite
+ruff check .                                     # lint
+python -m eval.run_eval --compare                # vector vs hybrid A/B
 ```
+
+> **On Windows, or no `make`?** Every command above runs directly — the `Makefile`
+> is just optional shorthand. Map: `make api` → `uvicorn src.rag.api:app --reload --port 8000`,
+> `make ui` → `streamlit run ui/streamlit_app.py`, `make test` → `pytest -q`,
+> `make lint` → `ruff check .`, `make eval` → `python -m eval.run_eval`
+> (`--no-ragas` to skip Ragas), `make eval-compare` → `python -m eval.run_eval --compare`,
+> `make install-hf` → `pip install -r requirements-hf.txt`.
 
 The `fake` providers return deterministic, grounded-looking output so you can
 click through the whole app — citations, latency, (zero) cost — entirely offline.
@@ -221,7 +228,7 @@ Prefer real open-source models but **no API key and no cost**? Use the `hf`
 provider tier, which runs models on your own machine:
 
 ```bash
-make install-hf                 # one-time: installs transformers + torch (heavy)
+pip install -r requirements-hf.txt   # one-time: installs transformers + torch (heavy)
 # in .env
 LLM_PROVIDER=hf
 EMBEDDING_PROVIDER=hf
@@ -233,7 +240,7 @@ HF_DEVICE=cpu                                              # or a GPU index like
 Then `python -m src.rag.ingest --reset` and run as usual. Models download once
 and then run offline; cost is always `$0`. The defaults are small, ungated
 models (no login/token needed) that run on CPU — pick a bigger `HF_LLM_MODEL`
-if you have a GPU. `make eval` then gives real **refusal / retrieval-quality**
+if you have a GPU. `python -m eval.run_eval` then gives real **refusal / retrieval-quality**
 numbers for free (Ragas faithfulness still needs an OpenAI judge).
 
 ## Run with real OpenAI models
@@ -249,8 +256,8 @@ RETRIEVAL_MODE=hybrid           # vector | hybrid
 MIN_RELEVANCE_SCORE=0.25        # optional hallucination guard (vector mode)
 ```
 
-Then `python -m src.rag.ingest --reset` and run as above. `make eval` now
-produces real faithfulness / refusal numbers.
+Then `python -m src.rag.ingest --reset` and run as above. `python -m eval.run_eval`
+now produces real faithfulness / refusal numbers.
 
 ## Run in Docker & deploy
 
@@ -275,9 +282,9 @@ in identically).
 ## Evaluation
 
 ```bash
-make eval                       # retrieval metrics (+ Ragas if OpenAI is configured)
-make eval NO_RAGAS=1            # retrieval metrics only (no key)
-make eval-compare               # A/B: vector vs hybrid retrieval
+python -m eval.run_eval                    # retrieval metrics (+ Ragas if OpenAI is configured)
+python -m eval.run_eval --no-ragas         # retrieval metrics only (no key)
+python -m eval.run_eval --compare          # A/B: vector vs hybrid retrieval
 python -m eval.run_eval --min-recall 0.8   # the CI regression gate
 ```
 

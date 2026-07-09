@@ -7,8 +7,8 @@ a metric trend across runs (kept honest by separating provider tiers), and a
 per-question pass/fail table.
 
 The app never runs the eval itself (that re-ingests and, on OpenAI, costs money
-and time); reports are generated out-of-band with `make eval` / `make
-eval-compare` and simply displayed here.
+and time); reports are generated out-of-band with `python -m eval.run_eval` /
+`python -m eval.run_eval --compare` and simply displayed here.
 """
 from __future__ import annotations
 
@@ -173,9 +173,9 @@ if not eval_runs:
 <div class="panel">
   <h3>Generate a report</h3>
   <p>Run the eval harness from a terminal, then click <b>↻ Refresh</b>:</p>
-  <p class="mono">make eval NO_RAGAS=1&nbsp;&nbsp;# retrieval metrics — no API key</p>
-  <p class="mono">make eval&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# + Ragas generation metrics (needs OPENAI_API_KEY)</p>
-  <p class="mono">make eval-compare&nbsp;&nbsp;# vector vs hybrid A/B</p>
+  <p class="mono">python -m eval.run_eval --no-ragas&nbsp;&nbsp;# retrieval metrics — no API key</p>
+  <p class="mono">python -m eval.run_eval&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;# + Ragas generation metrics (needs OPENAI_API_KEY)</p>
+  <p class="mono">python -m eval.run_eval --compare&nbsp;&nbsp;&nbsp;# vector vs hybrid A/B</p>
   <p>Reports are written to <span class="mono">eval/results/</span>.</p>
 </div>
 """,
@@ -235,7 +235,7 @@ if ragas:
     g[3].metric("Context recall", fmt(ragas.get("context_recall")))
 else:
     st.info("No Ragas metrics in this run — they require the OpenAI path "
-            "(`LLM_PROVIDER=openai`). Run `make eval` with a key to populate them.")
+            "(`LLM_PROVIDER=openai`). Run `python -m eval.run_eval` with a key to populate them.")
 
 # --- Quality-at-a-glance bar --------------------------------------------------
 bars = [("Recall@k", rm.get("context_recall_at_k")),
@@ -292,7 +292,7 @@ if compare_runs:
                f"`{(comp.get('providers', {}) or {}).get('embedding', '?')}`. "
                "On real semantic embeddings hybrid's edge is typically larger.")
 else:
-    st.info("No A/B comparison yet — run `make eval-compare` to generate one.")
+    st.info("No A/B comparison yet — run `python -m eval.run_eval --compare` to generate one.")
 
 # --- Trend across runs --------------------------------------------------------
 st.markdown("#### Metric trend across runs")

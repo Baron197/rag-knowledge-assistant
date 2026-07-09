@@ -263,9 +263,9 @@ with tabs[3]:
          "<b>Failed</b> to see exactly where the system struggles.", "info")
 
     st.info("**Generate reports** from a terminal, then open the Evaluation page:\n\n"
-            "```\nmake eval NO_RAGAS=1   # retrieval metrics, no API key\n"
-            "make eval             # + Ragas generation metrics (needs OPENAI_API_KEY)\n"
-            "make eval-compare     # vector vs hybrid A/B\n```")
+            "```\npython -m eval.run_eval --no-ragas   # retrieval metrics, no API key\n"
+            "python -m eval.run_eval             # + Ragas generation metrics (needs OPENAI_API_KEY)\n"
+            "python -m eval.run_eval --compare    # vector vs hybrid A/B\n```")
 
 # ── Concepts ──────────────────────────────────────────────────────────────────
 with tabs[4]:

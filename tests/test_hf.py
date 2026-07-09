@@ -1,7 +1,7 @@
 """Optional tests for the local Hugging Face providers.
 
 These are SKIPPED entirely unless `sentence-transformers` is installed (it is not
-part of the default deps or CI -- run `make install-hf` first). When run, they
+part of the default deps or CI -- run `pip install -r requirements-hf.txt` first). When run, they
 download a small model once and verify the HF embedder integrates correctly and
 can power real retrieval. The generation model is not exercised here because it
 is large; the embedder is the meaningful, lightweight check.
