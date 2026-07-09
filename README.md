@@ -147,9 +147,10 @@ The interesting engineering is in the choices, not the line count:
 
 ## Results
 
-Two real runs are committed under [`eval/results/`](eval/results/) so these
-numbers are reproducible artifacts, not just screenshots — the keyless run (what
-CI gates) and a real **OpenAI** run.
+The real **OpenAI** run below is committed under [`eval/results/`](eval/results/)
+(alongside the vector-vs-hybrid A/B), so those numbers are reproducible artifacts,
+not just screenshots. The keyless numbers are deterministic — CI reproduces them
+on every run, and that run is the gate.
 
 **Real OpenAI path** — `llm=openai · embedding=openai · pgvector · hybrid · k=4`
 ([`eval-20260705T085510Z.md`](eval/results/eval-20260705T085510Z.md)):
