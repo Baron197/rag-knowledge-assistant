@@ -24,7 +24,7 @@ first-class here.
 
 > **Two implementations, by design.** This repo builds the RAG service **from
 > scratch** -- hand-written retrieval, BM25, Reciprocal Rank Fusion and vector
-> store, no framework. A companion repo, **`rag-langchain`**, builds the *same*
+> store, no framework. A companion repo, [**`rag-langchain`**](https://github.com/Baron197/rag-langchain), builds the *same*
 > service idiomatically with **LangChain (LCEL)**. Doing it both ways shows
 > first-principles understanding **and** fluency with the industry-standard
 > framework.
