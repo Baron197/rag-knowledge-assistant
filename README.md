@@ -2,6 +2,9 @@
 
 > A production-style **Retrieval-Augmented Generation** service that answers questions over a document corpus with **grounded, cited answers**, **hybrid retrieval**, a **built-in evaluation pipeline**, and **cost / latency observability**.
 
+**▶ [Try the live demo](https://rag-knowledge-assistant-baron-p-hartono.streamlit.app/)** — grounded, cited answers right in your browser · keyless `fake` mode · no signup.
+
+[![Live demo](https://img.shields.io/badge/Live%20demo-Streamlit-FF4B4B?logo=streamlit&logoColor=white)](https://rag-knowledge-assistant-baron-p-hartono.streamlit.app/)
 [![CI](https://github.com/Baron197/rag-knowledge-assistant/actions/workflows/ci.yml/badge.svg)](https://github.com/Baron197/rag-knowledge-assistant/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/API-FastAPI-009688?logo=fastapi&logoColor=white)
