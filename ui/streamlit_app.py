@@ -15,6 +15,7 @@ Env:  RAG_API_URL  -> where the FastAPI service lives (default localhost:8000)
 from __future__ import annotations
 
 import common
+import demo_backend
 import streamlit as st
 
 st.set_page_config(
@@ -23,6 +24,12 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+# Single-process demo hosts (e.g. Streamlit Community Cloud) have no separate API
+# process, so boot one in-process here (keyless fake mode). A no-op wherever a real
+# API is already reachable (local dev / Docker / a VM) -- the normal thin-client
+# path is unchanged.
+demo_backend.ensure_local_backend()
 
 # Theme: a session-state flag drives light/dark. The toggle (below the nav) is
 # bound to the same key, so flipping it reruns and re-injects the right palette.

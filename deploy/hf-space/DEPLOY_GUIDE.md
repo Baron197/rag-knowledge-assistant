@@ -1,8 +1,13 @@
-# Deploy the live demo to Hugging Face Spaces (free, no credit card)
+# Deploy the live demo to Hugging Face Spaces (Docker)
 
-This runs the whole app — FastAPI service **and** Streamlit UI — in one free
-Hugging Face Space. Defaults to the keyless `fake` providers, so it costs nothing
-and needs no API key. Total time: ~10 minutes, most of it the first build.
+> ⚠️ **As of 2026, Hugging Face Docker (and Gradio) Spaces require a paid PRO plan**
+> — only *Static* Spaces are free. For a **free, no-credit-card** demo, use
+> [`../streamlit-cloud/DEPLOY_GUIDE.md`](../streamlit-cloud/DEPLOY_GUIDE.md) instead.
+> The files in this folder still work if you have HF PRO.
+
+This runs the whole app — FastAPI service **and** Streamlit UI — in one Hugging
+Face Docker Space. Defaults to the keyless `fake` providers, so it needs no API
+key. Total time: ~10 minutes, most of it the first build.
 
 The Space itself only needs **two files** (`Dockerfile` + `README.md`); the app
 code is cloned from GitHub at build time.
@@ -18,7 +23,7 @@ Go to <https://huggingface.co/new-space> and set:
 - **Space name:** `rag-knowledge-assistant`
 - **License:** MIT
 - **SDK:** **Docker** → **Blank** template
-- **Hardware:** *CPU basic · 2 vCPU · 16 GB* (the free default)
+- **Hardware:** *CPU basic* (Docker Spaces now require a PRO plan — no longer free)
 - **Visibility:** Public
 
 Click **Create Space**. This creates an empty git repo for the Space.
