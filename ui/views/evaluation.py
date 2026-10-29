@@ -3,8 +3,9 @@
 Fetches GET /eval-results and renders, for a selected run: the retrieval metrics
 (recall@k / recall@1 / MRR / refusal accuracy), the Ragas generation metrics
 when the run was produced on the OpenAI path, a vector-vs-hybrid A/B comparison,
-a metric trend across runs (kept honest by separating provider tiers), and a
-per-question pass/fail table.
+the follow-up (multi-turn) A/B -- without vs with chat history -- a metric trend
+across runs (kept honest by separating provider tiers), and a per-question
+pass/fail table.
 
 The app never runs the eval itself (that re-ingests and, on OpenAI, costs money
 and time); reports are generated out-of-band with `python -m eval.run_eval` /
@@ -92,6 +93,10 @@ def build_html_report(run: dict) -> str:
     summary = dict(rm)
     if ragas:
         summary.update({f"ragas.{k}": v for k, v in ragas.items()})
+    fu = run.get("followup_metrics") or {}
+    for side in ("without_history", "with_history"):
+        for k, v in (fu.get(side) or {}).items():
+            summary[f"followup.{side}.{k}"] = v
     rows = "".join(f"<tr><td>{esc(str(k))}</td><td>{esc(str(v))}</td></tr>" for k, v in summary.items())
     css = (
         "*{box-sizing:border-box}"
@@ -293,6 +298,44 @@ if compare_runs:
                "On real semantic embeddings hybrid's edge is typically larger.")
 else:
     st.info("No A/B comparison yet — run `python -m eval.run_eval --compare` to generate one.")
+
+# --- Follow-up questions (multi-turn) -----------------------------------------
+st.markdown("#### Follow-up questions — without vs with chat history")
+fu = run.get("followup_metrics") or None
+if fu:
+    fu_wo, fu_w = fu.get("without_history", {}) or {}, fu.get("with_history", {}) or {}
+    fu_rows = []
+    for key, label in (("context_recall_at_k", "Recall@k"), ("recall_at_1", "Recall@1"),
+                       ("mrr", "MRR")):
+        a, b = fu_wo.get(key), fu_w.get(key)
+        if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+            d = round(b - a, 3)
+            d_str = f"+{d:.3f}" if d > 0 else f"{d:.3f}"
+        else:
+            d_str = "—"
+        fu_rows.append({"Metric": label, "without history": fmt(a), "with history": fmt(b),
+                        "Δ (with−without)": d_str})
+    st.dataframe(pd.DataFrame(fu_rows), hide_index=True, use_container_width=True)
+    how = ("a real LLM rewrite" if prov.get("llm") in ("openai", "hf")
+           else "the keyless heuristic (prepends the earlier question)")
+    st.caption(f"{fu.get('questions', '?')} multi-turn questions from "
+               f"`eval/golden_multiturn.jsonl`, each scored twice; follow-ups were rewritten "
+               f"by {how}. The delta is what resolving the conversation buys retrieval.")
+    fu_per = run.get("followup_per_question") or []
+    if fu_per:
+        with st.expander("Per question — what each follow-up was searched as"):
+            def _rank(d: dict) -> str:
+                r = (d or {}).get("first_relevant_rank")
+                return str(r) if r is not None else "miss"
+            st.dataframe(pd.DataFrame([{
+                "Follow-up": p.get("question", ""),
+                "Searched as": (p.get("with_history") or {}).get("searched_as", ""),
+                "Rank with history": _rank(p.get("with_history")),
+                "Rank without": _rank(p.get("without_history")),
+            } for p in fu_per]), hide_index=True, use_container_width=True)
+else:
+    st.info("No follow-up metrics in this run — re-run `python -m eval.run_eval` to score "
+            "the multi-turn set (`eval/golden_multiturn.jsonl`).")
 
 # --- Trend across runs --------------------------------------------------------
 st.markdown("#### Metric trend across runs")

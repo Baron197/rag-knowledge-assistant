@@ -13,6 +13,10 @@ Runs the RAG pipeline over a golden Q/A set and reports two tiers of metrics:
          this number is only meaningful with real semantic embeddings)
   * Need a real LLM judge (LLM_PROVIDER=openai; Ragas calls OpenAI):
       - Ragas: faithfulness, answer_relevancy, context_precision, context_recall
+  * Follow-up questions (eval/golden_multiturn.jsonl): the same rank metrics,
+    scored WITH and WITHOUT the chat history -- an A/B of the conversational
+    rewrite. On the keyless path the rewrite is the deterministic heuristic; with
+    LLM_PROVIDER=openai/hf it is a real LLM rewrite.
 
 Results are written to eval/results/ as JSON + a Markdown table for the README.
 
@@ -39,6 +43,7 @@ from src.rag.ingest import ingest  # noqa: E402
 from src.rag.pipeline import RAGPipeline  # noqa: E402
 
 GOLDEN = Path(__file__).parent / "golden_set.jsonl"      # the labelled question set
+GOLDEN_MULTITURN = Path(__file__).parent / "golden_multiturn.jsonl"  # follow-ups + history
 # Single source of truth with the API's /eval-results reader (repo-anchored by
 # default; both honour EVAL_RESULTS_DIR).
 RESULTS_DIR = Path(get_settings().eval_results_dir)      # where reports are written
@@ -48,9 +53,12 @@ REFUSAL_MARKER = "don't have enough information"          # substring that marks
 EVAL_TRACE_DIR = Path(__file__).parent / "traces"
 
 
-def load_golden() -> list[dict]:
-    """Load the golden Q/A set (one JSON object per non-empty line)."""
-    return [json.loads(line) for line in GOLDEN.read_text().splitlines() if line.strip()]
+def load_golden(path: Path = GOLDEN) -> list[dict]:
+    """Load a golden Q/A set (one JSON object per non-empty line); [] if absent."""
+    if not path.exists():
+        return []
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()
+            if line.strip()]
 
 
 def _ordered_sources(ans) -> list[str]:
@@ -127,6 +135,56 @@ def retrieval_metrics(rows: list[dict], pipeline: RAGPipeline) -> tuple[dict, li
     return metrics, per_q
 
 
+def followup_metrics(rows: list[dict], pipeline: RAGPipeline) -> tuple[dict, list[dict]]:
+    """Score follow-up questions WITH and WITHOUT their chat history.
+
+    Each multi-turn row is a short conversation plus a follow-up ("does deleting
+    it ...?"). The same rank metrics as `retrieval_metrics` are computed twice,
+    so the delta is exactly what the conversational rewrite buys. The answer cache
+    is cleared before each pass, so cost/latency reflect real work.
+    Returns ({"questions", "with_history", "without_history"}, per_question_detail).
+    """
+    rows = [r for r in rows if r.get("expected_sources")]  # rank metrics: answerable only
+
+    def score(use_history: bool) -> tuple[dict, list[dict]]:
+        pipeline.clear_cache()
+        hits = top1 = 0
+        rr_sum = cost = 0.0
+        detail = []
+        for r in rows:
+            ans = pipeline.answer(r["question"], history=r["history"] if use_history else None)
+            ordered = _ordered_sources(ans)
+            expected = set(r["expected_sources"])
+            rank = next((i for i, s in enumerate(ordered) if s in expected), None)
+            hits += int(rank is not None)
+            top1 += int(rank == 0)
+            rr_sum += (1.0 / (rank + 1)) if rank is not None else 0.0
+            cost += ans.cost_usd
+            detail.append({"searched_as": ans.standalone_question, "retrieved_sources": ordered,
+                           "first_relevant_rank": (rank + 1) if rank is not None else None})
+        n = len(rows)
+        return {
+            "context_recall_at_k": round(hits / n, 3) if n else None,
+            "recall_at_1": round(top1 / n, 3) if n else None,
+            "mrr": round(rr_sum / n, 3) if n else None,
+            "avg_cost_usd": round(cost / n, 8) if n else 0,
+        }, detail
+
+    with_m, with_d = score(use_history=True)
+    without_m, without_d = score(use_history=False)
+    per_q = [
+        {
+            "question": r["question"],
+            "history": r["history"],
+            "expected_sources": sorted(r["expected_sources"]),
+            "with_history": w,
+            "without_history": wo,
+        }
+        for r, w, wo in zip(rows, with_d, without_d, strict=True)
+    ]
+    return {"questions": len(rows), "with_history": with_m, "without_history": without_m}, per_q
+
+
 def ragas_metrics(rows: list[dict], pipeline: RAGPipeline) -> dict | None:
     """Generation-quality metrics. Requires a real LLM and the `ragas` package.
 
@@ -181,7 +239,13 @@ def ragas_metrics(rows: list[dict], pipeline: RAGPipeline) -> dict | None:
         return None
 
 
-def write_report(metrics: dict, ragas: dict | None, per_q: list[dict]) -> Path:
+def write_report(
+    metrics: dict,
+    ragas: dict | None,
+    per_q: list[dict],
+    followup: dict | None = None,
+    followup_q: list[dict] | None = None,
+) -> Path:
     """Write the eval results to eval/results/ as a JSON file + a Markdown table.
 
     Returns the path of the Markdown report.
@@ -203,6 +267,8 @@ def write_report(metrics: dict, ragas: dict | None, per_q: list[dict]) -> Path:
         "retrieval_metrics": metrics,
         "ragas_metrics": ragas,
         "per_question": per_q,
+        "followup_metrics": followup,
+        "followup_per_question": followup_q or [],
     }
     (RESULTS_DIR / f"eval-{stamp}.json").write_text(json.dumps(payload, indent=2))
 
@@ -229,9 +295,30 @@ def write_report(metrics: dict, ragas: dict | None, per_q: list[dict]) -> Path:
     if ragas:
         lines += ["", "## Generation metrics (Ragas)", "", "| Metric | Value |", "|---|---|"]
         lines += [f"| {k} | {v} |" for k, v in ragas.items()]
+    if followup:
+        wo, w = followup["without_history"], followup["with_history"]
+        rewrite = "LLM rewrite" if settings.llm_provider in ("openai", "hf") else "keyless heuristic"
+        lines += [
+            "",
+            f"## Follow-up questions ({followup['questions']} multi-turn, {rewrite})",
+            "",
+            "| Metric | without history | with history | delta |",
+            "|---|---|---|---|",
+        ]
+        for key, label in (("context_recall_at_k", "Context recall@k"),
+                           ("recall_at_1", "Recall@1"), ("mrr", "MRR")):
+            lines.append(f"| {label} | {wo[key]} | {w[key]} | {_delta(wo[key], w[key])} |")
     md_path = RESULTS_DIR / f"eval-{stamp}.md"
     md_path.write_text("\n".join(lines) + "\n")
     return md_path
+
+
+def _delta(before, after) -> str:
+    """Signed difference after-minus-before, or 'n/a' when either side is missing."""
+    if before is None or after is None:
+        return "n/a"
+    d = round(after - before, 3)
+    return f"+{d}" if d > 0 else str(d)
 
 
 def run_compare(rows: list[dict]) -> Path:
@@ -325,12 +412,23 @@ def main() -> None:
     settings = get_settings().model_copy(update={"trace_dir": EVAL_TRACE_DIR})
     pipeline = RAGPipeline(settings=settings)
     metrics, per_q = retrieval_metrics(rows, pipeline)
+    # Ragas BEFORE the follow-up pass: it re-asks the main questions and reuses the
+    # answers cached above, while followup_metrics clears that cache.
     ragas = None if args.no_ragas else ragas_metrics(rows, pipeline)
-    md_path = write_report(metrics, ragas, per_q)
+    followup, followup_q = None, None
+    mt_rows = load_golden(GOLDEN_MULTITURN)
+    if mt_rows:
+        followup, followup_q = followup_metrics(mt_rows, pipeline)
+    md_path = write_report(metrics, ragas, per_q, followup, followup_q)
 
     print("\n=== Retrieval metrics ===")
     for k, v in metrics.items():
         print(f"  {k}: {v}")
+    if followup:
+        print(f"\n=== Follow-up questions ({followup['questions']}): without -> with history ===")
+        for k in ("context_recall_at_k", "recall_at_1", "mrr"):
+            wo, w = followup["without_history"][k], followup["with_history"][k]
+            print(f"  {k}: {wo} -> {w} ({_delta(wo, w)})")
     if ragas:
         print("\n=== Ragas metrics ===")
         for k, v in ragas.items():

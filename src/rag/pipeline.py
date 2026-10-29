@@ -6,6 +6,10 @@ latency -- the structured result an API, a UI, and an eval harness all need.
 
 It also adds a small, thread-safe LRU answer cache: repeated questions are served
 from memory at zero LLM cost, a simple real cost-optimisation lever.
+
+Follow-up questions are supported by passing the recent chat `history`: it is
+used to rewrite the question into a standalone one before retrieval (see
+conversation.py), never as evidence for the answer.
 """
 from __future__ import annotations
 
@@ -14,8 +18,9 @@ from collections import OrderedDict
 from dataclasses import dataclass, replace
 
 from .config import Settings, get_settings
+from .conversation import history_key, needs_rewrite, normalize_history, rewrite_question
 from .embeddings import get_embedder
-from .llm import get_llm
+from .llm import FakeLLM, get_llm
 from .observability import Trace, Tracer, cost_usd
 from .prompts import SYSTEM_PROMPT, build_user_prompt
 from .retriever import Retriever
@@ -47,6 +52,9 @@ class Answer:
     n_contexts: int
     retrieval_mode: str = "vector"
     cached: bool = False  # True when served from the LRU cache (cost 0)
+    # The question actually searched: the user's question, or its standalone
+    # rewrite when it was a follow-up resolved against the chat history.
+    standalone_question: str = ""
 
 
 class RAGPipeline:
@@ -91,17 +99,40 @@ class RAGPipeline:
             while len(self._cache) > self.settings.cache_size:
                 self._cache.popitem(last=False)
 
-    def answer(self, question: str, k: int | None = None) -> Answer:
+    def clear_cache(self) -> None:
+        """Drop every cached answer (e.g. between eval runs, for clean cost/latency)."""
+        with self._cache_lock:
+            self._cache.clear()
+
+    def answer(
+        self, question: str, k: int | None = None, history: list[dict] | None = None
+    ) -> Answer:
         """Run the full query lifecycle and return a structured `Answer`.
 
-        Steps: cache check -> (timed) retrieval -> grounded prompt -> (timed)
+        Steps: cache check -> (timed) follow-up rewrite, only for a question that
+        leans on the history -> (timed) retrieval -> grounded prompt -> (timed)
         generation -> cost accounting -> trace -> cache store.
+
+        `history` is the recent conversation, oldest first, as
+        ``[{"role": "user" | "assistant", "content": str}, ...]``. It only turns a
+        follow-up into a standalone question; the answer is grounded in the
+        retrieved passages alone.
         """
         # Normalise k so an explicit default and an omitted value share a cache key.
         k = k or self.settings.top_k
+        turns = normalize_history(history, self.settings.history_window)
+        # Only a question that leans on earlier turns ("does deleting IT ...?") is
+        # rewritten. A standalone one ignores the history: no rewrite call, and it
+        # shares its cache entry with the single-turn path.
+        follow_up = needs_rewrite(question, turns)
+        # A follow-up's answer depends on the history that resolves it, so that
+        # history is part of its key. Keying on the raw history (not the rewritten
+        # question) means nothing is spent before the lookup: every hit is
+        # genuinely free, so an untraced hit never hides real spend.
+        key = (question, k, history_key(turns) if follow_up else ())
 
         if self.settings.enable_cache:
-            hit = self._cache_get((question, k))
+            hit = self._cache_get(key)
             if hit is not None:
                 # Served from cache: free and instant. Not traced, so /metrics
                 # reflects real (uncached) query cost and latency.
@@ -109,16 +140,26 @@ class RAGPipeline:
 
         trace = Trace(question=question)
 
-        # 1) Retrieval (timed): question -> top passages.
+        # 0) Follow-up rewrite (timed): history + question -> standalone question.
+        #    A FakeLLM can't rewrite, so the keyless path uses the heuristic.
+        search_question, rewrite = question, None
+        if follow_up:
+            with self.tracer.span(trace, "rewrite"):
+                search_question, rewrite = rewrite_question(
+                    question, turns, self.llm, use_llm=not isinstance(self.llm, FakeLLM)
+                )
+
+        # 1) Retrieval (timed): standalone question -> top passages.
         with self.tracer.span(trace, "retrieval"):
-            hits, embed_tokens = self.retriever.retrieve(question, k)
+            hits, embed_tokens = self.retriever.retrieve(search_question, k)
 
         # 2) Generation (timed): grounded prompt -> answer with citations.
-        user_prompt = build_user_prompt(question, hits)
+        user_prompt = build_user_prompt(search_question, hits)
         with self.tracer.span(trace, "generation"):
             result = self.llm.complete(SYSTEM_PROMPT, user_prompt)
 
-        # 3) Cost = embedding tokens + prompt/completion tokens, via the price table.
+        # 3) Cost = embedding tokens + prompt/completion tokens (+ the rewrite
+        #    call, if one was made), via the price table.
         if self.settings.embedding_provider == "openai":
             embed_model = self.settings.openai_embedding_model
         elif self.settings.embedding_provider == "hf":
@@ -128,6 +169,8 @@ class RAGPipeline:
         total_cost = cost_usd(embed_model, embed_tokens) + cost_usd(
             result.model, result.prompt_tokens, result.completion_tokens
         )
+        if rewrite is not None:
+            total_cost += cost_usd(rewrite.model, rewrite.prompt_tokens, rewrite.completion_tokens)
 
         # 4) Fill in and persist the trace.
         trace.tokens = {
@@ -135,6 +178,11 @@ class RAGPipeline:
             "prompt": result.prompt_tokens,
             "completion": result.completion_tokens,
         }
+        if follow_up:
+            trace.tokens["rewrite"] = (
+                rewrite.prompt_tokens + rewrite.completion_tokens if rewrite else 0
+            )
+        trace.standalone_question = search_question
         trace.cost_usd = total_cost
         trace.n_contexts = len(hits)
         trace.answer = result.text
@@ -152,10 +200,11 @@ class RAGPipeline:
             n_contexts=len(hits),
             retrieval_mode=self.settings.retrieval_mode,
             cached=False,
+            standalone_question=search_question,
         )
 
         if self.settings.enable_cache:
-            self._cache_put((question, k), ans)
+            self._cache_put(key, ans)
         return ans
 
     @staticmethod

@@ -62,6 +62,11 @@ For reviewers, here is the applied-AI engineering signal at a glance:
   with Reciprocal Rank Fusion; a hand-written BM25 (no black box).
 - **Anti-hallucination by design** — answers are grounded, cite their sources,
   and **refuse** when the context is insufficient.
+- **Conversational follow-ups** — the chat sends its recent history, and a
+  follow-up such as *"does deleting it take effect immediately?"* is rewritten
+  into a standalone question before retrieval (LLM rewrite, keyless heuristic
+  fallback). History only resolves *what* is being asked — it is never cited —
+  and the gain is measured by a with-vs-without-history A/B.
 - **Evaluation, with numbers** — a golden Q/A set scored for recall@k, recall@1
   and MRR, plus an **A/B harness** comparing retrieval strategies; Ragas
   faithfulness/relevancy on the real path.
@@ -103,6 +108,21 @@ Sources:
 mode: hybrid · ~1.2 s · ~$0.0004 · 4 context passages
 ```
 
+A follow-up uses the conversation to work out what *it* refers to, then searches
+for the standalone question:
+
+```
+Q: Does deleting it take effect immediately?
+   ↳ searched as: Does deleting an API key take effect immediately?
+
+A: Yes. Deleting a key takes effect immediately, and any request that uses
+   it afterwards returns 401. [1]
+```
+
+*(In the keyless live demo the rewrite is a deterministic heuristic, so "searched
+as" shows the earlier question prepended instead: "How do I rotate a leaked API
+key? Does deleting it take effect immediately?")*
+
 Ask something outside the docs and it refuses instead of inventing an answer:
 
 ```
@@ -118,7 +138,8 @@ flowchart LR
         D[Docs: md/txt/html/pdf] --> C[Chunk] --> E1[Embed] --> V[(Vector store)]
     end
     subgraph Query
-        Q[Question] --> E2[Embed] --> R[Retrieve: vector + BM25 -> RRF]
+        Q[Question + recent history] --> RW[Rewrite follow-up -> standalone question]
+        RW --> E2[Embed] --> R[Retrieve: vector + BM25 -> RRF]
         V --> R
         R --> P[Grounded prompt + citations] --> L[LLM] --> A[Answer + sources]
     end
@@ -128,10 +149,12 @@ flowchart LR
     EVAL[Eval harness + Ragas] --> API
 ```
 
-**Request lifecycle:** `UI → FastAPI → pipeline (retrieve → prompt → generate) →
-trace`. The UI and the evaluation harness both go through the same API, so there
-is a single source of truth. Each query is timed and costed; repeated questions
-are served from the cache.
+**Request lifecycle:** `UI → FastAPI → pipeline (rewrite follow-up → retrieve →
+prompt → generate) → trace`. The UI and the evaluation harness both go through
+the same API, so there is a single source of truth. Each query is timed and
+costed; repeated questions are served from the cache. The rewrite step only runs
+for a question that leans on the conversation (*it*, *they*, *what about…*); a
+self-contained question skips it and behaves exactly like a single-turn query.
 
 ## Design decisions & trade-offs
 
@@ -144,6 +167,7 @@ The interesting engineering is in the choices, not the line count:
 | Provider abstractions + keyless `fake` mode | App, tests and CI run with no key and no cost | Fake embeddings are keyword-based, not semantic → quality metrics need a real model |
 | Evaluation wired into CI as a gate | Quality can't silently regress between changes | Requires maintaining a golden set |
 | LRU answer cache | Repeated questions cost nothing and return instantly | In-memory (per-process); a shared cache (Redis) would be the next step |
+| Follow-ups: client sends history, a cheap heuristic gates the rewrite | The API stays stateless (no session store); self-contained questions skip the rewrite call and keep their cache hits; only a follow-up's cache key includes the history, so every hit is genuinely free | A follow-up with no referring word ("how long does approval take?") isn't rewritten; the keyless path uses a heuristic, not an LLM |
 | FastAPI service with a thin Streamlit UI | Clean separation; the API is the single source of truth | Two processes to run locally |
 | Local JSONL tracer (Langfuse-shaped) | Dependency-free observability out of the box | Swap to Langfuse / OpenTelemetry at scale |
 | `temperature=0` for generation | Reproducible answers, stable evaluation | Less varied phrasing |
@@ -176,7 +200,25 @@ plumbing end-to-end, offline at $0; this is the run the CI gate enforces):
 | Recall@1 | 0.78 |
 | MRR | 0.87 |
 | Avg cost / query | $0.00 |
-| Tests | 24 / 24 passing |
+| Tests | 53 passing (2 need the optional HF deps and skip in CI) |
+
+**Follow-up questions** — 7 multi-turn conversations
+([`eval/golden_multiturn.jsonl`](eval/golden_multiturn.jsonl)), each scored
+*without* and *with* its chat history, on the same keyless run (vector mode,
+heuristic rewrite):
+
+| Metric | without history | with history | delta |
+|---|---|---|---|
+| Context recall@k | 0.857 | 1.0 | +0.143 |
+| Recall@1 | 0.714 | 0.857 | +0.143 |
+| MRR | 0.762 | 0.893 | +0.131 |
+
+> The one follow-up still not at rank 1 is *"And can I downgrade from it later?"*:
+> it is rewritten correctly, but the doc says **"Downgrades"** and the keyless
+> keyword-hash embedder has no stemming. That is a retrieval limit of the `fake`
+> tier, not a rewrite failure; semantic embeddings close it. The LLM-rewrite
+> numbers come from `python -m eval.run_eval` on the OpenAI/HF path (not yet
+> committed here).
 
 **Retrieval A/B — vector vs hybrid** on real OpenAI embeddings (`python -m eval.run_eval --compare`
 → [`compare-20260708T041312Z.md`](eval/results/compare-20260708T041312Z.md)):
@@ -221,8 +263,8 @@ The `fake` providers return deterministic, grounded-looking output so you can
 click through the whole app — citations, latency, (zero) cost — entirely offline.
 
 Add your own documents two ways: drop files into `data/docs/` and re-ingest, or
-upload them straight from the Streamlit sidebar (**Add documents → Upload &
-ingest**), which saves them server-side and rebuilds the index via `POST /upload`
+upload them straight from the Streamlit sidebar on the **Ask** page (**Documents →
+Upload & index**), which saves them server-side and rebuilds the index via `POST /upload`
 (accepts `.md`, `.txt`, `.html`, `.pdf`).
 
 ## Run free & locally with Hugging Face (no API key)
@@ -293,6 +335,9 @@ python -m eval.run_eval --min-recall 0.8   # the CI regression gate
 
 The golden set (`eval/golden_set.jsonl`, 28 Q/A pairs including out-of-scope
 questions that *should* be refused) is scored and saved to `eval/results/`.
+A second set (`eval/golden_multiturn.jsonl`, 7 short conversations ending in a
+follow-up) is scored with and without its history, so the report shows exactly
+what the conversational rewrite buys.
 
 ## How to review this repo
 
@@ -303,6 +348,7 @@ If you have five minutes and want the signal quickly, read these in order:
 3. `src/rag/vectorstore.py` — the two backends behind one interface.
 4. `eval/run_eval.py` — how quality is measured, A/B-compared, and gated.
 5. `src/rag/observability.py` — how latency, tokens and cost are tracked.
+6. `src/rag/conversation.py` — how follow-ups are resolved against the chat history.
 
 ## Project structure
 
@@ -314,10 +360,11 @@ src/rag/
   vectorstore.py    numpy (default) + pgvector backends
   lexical.py        BM25 keyword search + Reciprocal Rank Fusion
   retriever.py      vector or hybrid retrieval (+ relevance gate)
-  prompts.py        grounded, citeable system/user prompts
+  prompts.py        grounded, citeable system/user prompts (+ follow-up rewrite prompt)
+  conversation.py   follow-ups: history + question -> standalone question (LLM or heuristic)
   llm.py            OpenAI + Hugging Face (local) + keyless fake LLM
   observability.py  per-query traces, token cost, latency aggregation
-  pipeline.py       retrieve -> prompt -> generate -> trace (+ LRU cache)
+  pipeline.py       (rewrite) -> retrieve -> prompt -> generate -> trace (+ LRU cache)
   ingest.py         load -> chunk -> embed -> store (CLI)
   api.py            FastAPI: /health /ingest /upload /query /metrics /analytics /eval-results /documents /documents/{name}
 ui/
@@ -328,7 +375,7 @@ ui/
   views/analytics.py filterable charts over the query traces
   views/evaluation.py read-only dashboard of the eval reports (retrieval + Ragas + A/B)
   views/guide.py      in-app tutorial: how to use the app + what every metric means
-eval/               golden set + A/B + Ragas harness + results
+eval/               golden sets (single-turn + multi-turn) + A/B + Ragas harness + results
 tests/              end-to-end tests on the keyless path
 Dockerfile          containerised API
 .github/workflows/  CI: lint + tests + retrieval regression gate
@@ -336,8 +383,9 @@ Dockerfile          containerised API
 
 ## Testing & CI
 
-- **Tests** (`pytest`, 24) run end-to-end on the keyless path — fast,
-  deterministic, no network or API key.
+- **Tests** (`pytest`, 53) run end-to-end on the keyless path — fast,
+  deterministic, no network or API key (the 2 Hugging Face tests skip unless
+  the optional HF deps are installed).
 - **Lint** (`ruff`) enforces style and import hygiene.
 - **CI** (GitHub Actions) lints, runs the tests, then runs the evaluation as a
   **regression gate** (`--min-recall 0.8`): a change that breaks retrieval

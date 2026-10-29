@@ -11,7 +11,8 @@ Chart choices match the data:
   * a relationship (tokens vs latency)          -> scatter chart
 
 Note: cache hits are intentionally NOT traced, so this reflects real (uncached)
-retrieval + generation work only.
+work only: retrieval + generation, plus the follow-up rewrite stage for questions
+that were resolved against the chat history.
 """
 from __future__ import annotations
 
@@ -75,14 +76,18 @@ def to_frame(records: list[dict]) -> pd.DataFrame:
         out.append({
             "ts": pd.to_datetime(x.get("ts", 0), unit="s"),
             "question": x.get("question", ""),
+            "searched_as": x.get("standalone_question") or x.get("question", ""),
             "answer_preview": preview,
+            "rewrite_ms": float(t.get("rewrite", 0.0)),
             "retrieval_ms": retr,
             "generation_ms": gen,
             "latency_ms": sum(float(v) for v in t.values()),
             "embedding_tok": int(tok.get("embedding", 0)),
             "prompt_tok": int(tok.get("prompt", 0)),
             "completion_tok": int(tok.get("completion", 0)),
-            "tokens": int(tok.get("prompt", 0)) + int(tok.get("completion", 0)),
+            "rewrite_tok": int(tok.get("rewrite", 0)),
+            "tokens": (int(tok.get("prompt", 0)) + int(tok.get("completion", 0))
+                       + int(tok.get("rewrite", 0))),
             "cost_usd": float(x.get("cost_usd", 0.0)),
             "n_contexts": int(x.get("n_contexts", 0)),
             "refused": REFUSAL_MARKER in preview.lower(),
@@ -164,15 +169,21 @@ st.area_chart(cost_ts, x="ts", y="cumulative_cost_usd", color="#4F46E5", height=
 if f["cost_usd"].sum() == 0:
     st.caption("Cost is $0 on the fake / local providers — switch to OpenAI to see real spend.")
 
+# The follow-up rewrite stage only gets a series once some query actually used it.
+has_rewrite = bool((f["rewrite_ms"] > 0).any() or (f["rewrite_tok"] > 0).any())
 c_lat, c_tok = st.columns(2)
 with c_lat:
     st.markdown("#### Latency over time")
-    st.line_chart(f, x="ts", y=["retrieval_ms", "generation_ms"],
-                  color=["#9CB4FF", "#4F46E5"], height=240)
+    lat_cols, lat_colors = ["retrieval_ms", "generation_ms"], ["#9CB4FF", "#4F46E5"]
+    if has_rewrite:
+        lat_cols, lat_colors = ["rewrite_ms", *lat_cols], ["#C4B5FD", *lat_colors]
+    st.line_chart(f, x="ts", y=lat_cols, color=lat_colors, height=240)
 with c_tok:
     st.markdown("#### Token usage over time")
-    st.area_chart(f, x="ts", y=["prompt_tok", "completion_tok"],
-                  color=["#9CB4FF", "#4F46E5"], height=240)
+    tok_cols, tok_colors = ["prompt_tok", "completion_tok"], ["#9CB4FF", "#4F46E5"]
+    if (f["rewrite_tok"] > 0).any():
+        tok_cols, tok_colors = [*tok_cols, "rewrite_tok"], [*tok_colors, "#C4B5FD"]
+    st.area_chart(f, x="ts", y=tok_cols, color=tok_colors, height=240)
 
 # --- Distribution + document frequency ----------------------------------------
 c_dist, c_src = st.columns(2)
@@ -214,7 +225,7 @@ st.scatter_chart(f, x="tokens", y="latency_ms", color="refused", height=260)
 
 # --- Query log ----------------------------------------------------------------
 st.markdown("#### Query log")
-table = f[["ts", "question", "answer_preview", "latency_ms", "retrieval_ms",
+table = f[["ts", "question", "searched_as", "answer_preview", "latency_ms", "retrieval_ms",
            "generation_ms", "tokens", "cost_usd", "n_contexts", "refused"]]
 st.dataframe(
     table.iloc[::-1],   # newest first
@@ -223,6 +234,9 @@ st.dataframe(
     column_config={
         "ts": st.column_config.DatetimeColumn("Time", format="MMM D, HH:mm:ss"),
         "question": st.column_config.TextColumn("Question", width="medium"),
+        "searched_as": st.column_config.TextColumn(
+            "Searched as", width="medium",
+            help="The follow-up rewritten against the chat history (or the question as-is)."),
         "answer_preview": st.column_config.TextColumn("Answer preview", width="medium"),
         "latency_ms": st.column_config.NumberColumn("Latency", format="%.0f ms"),
         "retrieval_ms": st.column_config.NumberColumn("Retrieval", format="%.0f ms"),

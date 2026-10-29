@@ -76,6 +76,12 @@ class Settings(BaseSettings):
     # incomparable score scales).
     min_relevance_score: float = 0.0
 
+    # --- Conversation: follow-up questions ------------------------------------
+    # How many of the most recent chat messages (user + assistant) are used to
+    # resolve a follow-up ("does deleting it take effect immediately?") into a
+    # standalone question before retrieval. 0 = treat every question as standalone.
+    history_window: int = 6
+
     # --- Caching (cost optimisation): cache answers for repeated questions ---
     enable_cache: bool = True
     cache_size: int = 256                 # max distinct questions kept in the LRU

@@ -67,6 +67,7 @@ _LIGHT_VARS = """
   --cite-bg:#EEF0FF; --success:#059669; --success-bg:#ECFDF5;
   --warn:#B45309; --warn-bg:#FFFBEB; --cache:#7A5CFF; --cache-bg:#F3F0FF;
   --danger:#DC2626; --danger-bg:#FEF2F2; --seg-retr:#9CB4FF; --seg-gen:#4F46E5;
+  --seg-rw:#C4B5FD;
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
 }
 """
@@ -77,6 +78,7 @@ _DARK_VARS = """
   --cite-bg:#2A2F5C; --success:#34D399; --success-bg:#0F2A20;
   --warn:#FBBF24; --warn-bg:#2C2410; --cache:#B9A6FF; --cache-bg:#241E3F;
   --danger:#F87171; --danger-bg:#2C1616; --seg-retr:#4E5C93; --seg-gen:#8E97FF;
+  --seg-rw:#6D5BB5;
   --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
 }
 """
@@ -121,6 +123,7 @@ _COMPONENTS = """
 .badge.cache{ background:var(--cache-bg); color:var(--cache); }
 .badge.refuse{ background:var(--warn-bg); color:var(--warn); }
 .badge.err{ background:var(--danger-bg); color:var(--danger); }
+.rewrite{ font:12px/1.4 var(--mono); color:var(--muted); margin:4px 0 2px; }
 
 .telemetry{ display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 2px; }
 .tile{ background:var(--surface-2); border:1px solid var(--border); border-radius:10px;
@@ -132,6 +135,7 @@ _COMPONENTS = """
 .latbar{ height:6px; border-radius:999px; overflow:hidden; display:flex;
   background:var(--border); width:100%; margin-top:6px; }
 .latbar .r{ background:var(--seg-retr); } .latbar .g{ background:var(--seg-gen); }
+.latbar .w{ background:var(--seg-rw); }
 
 .srccard{ border-left:3px solid var(--primary); background:var(--surface-2);
   border-radius:8px; padding:8px 12px; margin:6px 0; }

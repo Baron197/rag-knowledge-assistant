@@ -43,3 +43,25 @@ def build_user_prompt(question: str, hits: list[Hit]) -> str:
     """
     context = build_context_block(hits) if hits else "(no relevant context found)"
     return f"Context passages:\n\n{context}\n\nQuestion: {question}\n\nAnswer (with citations):"
+
+
+# Follow-up rewriting (see conversation.py). The model only RESOLVES references in
+# the latest question using the conversation; it must not answer or add facts, and
+# the history is never shown to the answering step as evidence.
+CONDENSE_SYSTEM_PROMPT = (
+    "You rewrite the user's latest question into a standalone question for a "
+    "documentation search engine. Use the conversation ONLY to resolve references "
+    "(pronouns such as 'it', 'they' or 'that', and omitted subjects). Rules:\n"
+    "1. Do not answer the question.\n"
+    "2. Do not add details the conversation does not state.\n"
+    "3. If the question already stands on its own, return it unchanged.\n"
+    "4. Reply with the standalone question only: one line, no quotes, no preamble."
+)
+
+
+def build_condense_prompt(question: str, history: list[dict[str, str]]) -> str:
+    """Render the recent conversation plus the latest question for the rewrite call."""
+    convo = "\n".join(
+        f"{'User' if t['role'] == 'user' else 'Assistant'}: {t['content']}" for t in history
+    )
+    return f"Conversation:\n{convo}\n\nLatest question: {question}\n\nStandalone question:"

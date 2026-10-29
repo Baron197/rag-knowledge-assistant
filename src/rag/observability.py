@@ -1,9 +1,10 @@
 """Lightweight observability: per-query traces, token usage, cost, and latency.
 
-Every query writes a structured trace (retrieval timing, generation timing,
-tokens, USD cost) to a JSONL file, and `aggregate()` rolls those up for a
-metrics endpoint / dashboard. In a larger deployment you'd swap this for
-Langfuse or OpenTelemetry -- the seams are intentionally in the same shape.
+Every query writes a structured trace (retrieval timing, generation timing, the
+follow-up rewrite when there is chat history, tokens, USD cost) to a JSONL file,
+and `aggregate()` rolls those up for a metrics endpoint / dashboard. In a larger
+deployment you'd swap this for Langfuse or OpenTelemetry -- the seams are
+intentionally in the same shape.
 """
 from __future__ import annotations
 
@@ -41,11 +42,14 @@ class Trace:
 
     question: str
     timings_ms: dict[str, float] = field(default_factory=dict)  # per-stage durations
-    tokens: dict[str, int] = field(default_factory=dict)        # embedding/prompt/completion
+    tokens: dict[str, int] = field(default_factory=dict)        # embedding/prompt/completion(/rewrite)
     cost_usd: float = 0.0
     n_contexts: int = 0
     answer: str = ""
     sources: list[str] = field(default_factory=list)
+    # What was actually searched -- differs from `question` when a follow-up was
+    # rewritten against the chat history. Logged so a bad rewrite is debuggable.
+    standalone_question: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         """Serialise to a plain dict (with a wall-clock timestamp) for logging."""
@@ -58,6 +62,7 @@ class Trace:
             "n_contexts": self.n_contexts,
             "sources": self.sources,
             "answer": self.answer,
+            "standalone_question": self.standalone_question or self.question,
         }
 
 

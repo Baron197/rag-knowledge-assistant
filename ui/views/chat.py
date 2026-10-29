@@ -4,6 +4,8 @@ A polished thin client: persistent conversation in session state, answers
 rendered with tinted [n] citation markers, a per-answer telemetry strip
 (latency split, cost, tokens, contexts), the cache-hit indicator, and a sidebar
 workbench (config, top-k, document upload/re-index, export, lifetime metrics).
+The recent conversation is sent with each question so follow-ups ("does it…?")
+can be resolved server-side; the rewritten query is shown under the answer.
 """
 from __future__ import annotations
 
@@ -39,6 +41,12 @@ DEMO_QUESTIONS = [
     "Why am I getting a 429 error?",
 ]
 
+# Follow-ups: the recent conversation travels with each question so the server
+# can resolve references. The server only uses its last HISTORY_WINDOW messages;
+# these caps just keep the request small.
+HISTORY_SEND = 10
+HISTORY_CHARS = 2000
+
 # Chat-specific session state.
 if "messages" not in st.session_state:
     st.session_state.messages = []        # list[{role, content, meta?}]
@@ -58,11 +66,35 @@ def tint_citations(answer: str, citations: list[dict]) -> str:
     return safe
 
 
+def build_history() -> list[dict]:
+    """The conversation so far as [{role, content}] for POST /query.
+
+    Assistant turns carry their ANSWER, which lives in `meta` (the message's own
+    "content" holds the question it answered). Failed turns are skipped.
+    """
+    out: list[dict] = []
+    for m in st.session_state.messages:
+        if m["role"] == "user":
+            text = m.get("content", "")
+        else:
+            meta = m.get("meta") or {}
+            if "error" in meta:
+                continue
+            text = meta.get("answer", "")
+        text = (text or "").strip()
+        if text:
+            out.append({"role": m["role"], "content": text[:HISTORY_CHARS]})
+    return out[-HISTORY_SEND:]
+
+
 def run_query(question: str) -> dict:
     """POST /query and return the answer payload or an {"error": ...} dict."""
     body: dict = {"question": question}
     if st.session_state.k != SERVER_DEFAULT_K:
         body["k"] = st.session_state.k
+    history = build_history()
+    if history:
+        body["history"] = history
     try:
         with st.status("Retrieving passages and generating a grounded answer…",
                        expanded=False) as status:
@@ -100,6 +132,12 @@ def render_assistant(meta: dict, idx: int) -> None:
                     'in the corpus</span></div>', unsafe_allow_html=True)
     st.markdown(tint_citations(meta.get("answer", ""), citations), unsafe_allow_html=True)
 
+    # A follow-up resolved against the conversation: show what was actually searched.
+    searched = meta.get("standalone_question")
+    if searched and searched != meta.get("question"):
+        st.markdown(f'<div class="rewrite">↳ searched as: {html.escape(searched)}</div>',
+                    unsafe_allow_html=True)
+
     # (2) Badge row: retrieval mode + cache-hit.
     badges = ('<span class="badge mode">mode: '
               f'{html.escape(str(meta.get("retrieval_mode", "?")))}</span>')
@@ -111,9 +149,12 @@ def render_assistant(meta: dict, idx: int) -> None:
     timings = meta.get("timings_ms", {}) or {}
     total_ms = sum(timings.values())
     tokens = meta.get("tokens", {}) or {}
-    tok_total = int(tokens.get("prompt", 0)) + int(tokens.get("completion", 0))
+    rw_tok = int(tokens.get("rewrite", 0))
+    tok_total = int(tokens.get("prompt", 0)) + int(tokens.get("completion", 0)) + rw_tok
     tok_tip = (f"embedding {tokens.get('embedding', 0)} · prompt {tokens.get('prompt', 0)}"
-               f" · completion {tokens.get('completion', 0)}")
+               f" · completion {tokens.get('completion', 0)}"
+               + (f" · rewrite {rw_tok}" if "rewrite" in tokens else ""))
+    tok_sub = "prompt+completion" + ("+rewrite" if rw_tok else "")
     cached = bool(meta.get("cached"))
     cost = float(meta.get("cost_usd", 0.0))
     if cached:
@@ -127,10 +168,15 @@ def render_assistant(meta: dict, idx: int) -> None:
     if not cached and total_ms > 0 and "retrieval" in timings and "generation" in timings:
         r_pct = timings["retrieval"] / total_ms * 100
         g_pct = timings["generation"] / total_ms * 100
+        # Optional leading segment for the follow-up rewrite stage.
+        w_seg, w_lab = "", ""
+        if "rewrite" in timings:
+            w_seg = f'<div class="w" style="width:{timings["rewrite"] / total_ms * 100:.0f}%"></div>'
+            w_lab = f'{timings["rewrite"]:.0f} rw / '
         lat_bar = (
-            f'<div class="latbar"><div class="r" style="width:{r_pct:.0f}%"></div>'
+            f'<div class="latbar">{w_seg}<div class="r" style="width:{r_pct:.0f}%"></div>'
             f'<div class="g" style="width:{g_pct:.0f}%"></div></div>'
-            f'<div class="sub">{timings["retrieval"]:.0f} retr / '
+            f'<div class="sub">{w_lab}{timings["retrieval"]:.0f} retr / '
             f'{timings["generation"]:.0f} gen</div>'
         )
 
@@ -143,7 +189,7 @@ def render_assistant(meta: dict, idx: int) -> None:
         f'<div class="tile"><div class="lab">Contexts</div>'
         f'<div class="val">{int(meta.get("n_contexts", 0))}</div></div>'
         f'<div class="tile" title="{html.escape(tok_tip)}"><div class="lab">Tokens</div>'
-        f'<div class="val">{tok_total}</div><div class="sub">prompt+completion</div></div>'
+        f'<div class="val">{tok_total}</div><div class="sub">{tok_sub}</div></div>'
     )
     st.markdown(f'<div class="telemetry">{tiles}</div>', unsafe_allow_html=True)
 
@@ -182,6 +228,9 @@ def build_export() -> str:
             lines += [f"**Error:** {meta['error']}", ""]
             continue
         lines += [meta.get("answer", ""), ""]
+        searched = meta.get("standalone_question")
+        if searched and searched != meta.get("question"):
+            lines += [f"_Searched as: {searched}_", ""]
         cites = meta.get("citations", []) or []
         if cites:
             lines.append("**Sources:**")
@@ -192,7 +241,8 @@ def build_export() -> str:
         lines += [
             "",
             f"`{total_ms:.0f} ms · ${float(meta.get('cost_usd', 0)):.6f} · "
-            f"{int(tok.get('prompt', 0)) + int(tok.get('completion', 0))} tokens · "
+            f"{int(tok.get('prompt', 0)) + int(tok.get('completion', 0)) + int(tok.get('rewrite', 0))}"
+            " tokens · "
             f"{int(meta.get('n_contexts', 0))} contexts · {flags}`",
             "",
         ]
@@ -316,6 +366,8 @@ with st.sidebar:
             st.toast("Conversation cleared", icon=":material/delete:")
             st.rerun()
         st.caption("Tip: ask the same question twice to see a cache hit — $0 cost.")
+        st.caption("Follow-ups (\"does it…?\") use the last few messages as context; "
+                   "Clear chat starts a fresh conversation.")
 
     with st.container(border=True):
         st.markdown('<div class="sgroup">Lifetime metrics</div>', unsafe_allow_html=True)
@@ -376,7 +428,8 @@ else:
 <div class="hero">
   <h2>Ask anything about your indexed docs</h2>
   <p>Answers are grounded in the corpus, with visible citations and per-query
-     cost &amp; latency. Ask the same question twice to see a cache hit.</p>
+     cost &amp; latency. Follow-up questions understand the conversation, and
+     asking the same question twice shows a cache hit.</p>
   <div class="lbl">Example questions · demo Nimbus corpus</div>
 </div>
 """,

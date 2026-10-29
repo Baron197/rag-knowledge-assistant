@@ -100,7 +100,9 @@ with tabs[0]:
          "the bundled demo docs (or upload your own). Browse what's indexed anytime on the "
          "<b>Corpus</b> page."),
         ("Go to the <b>Ask</b> page and type a question, or click one of the example "
-         "chips. Each answer appears in a chat you can keep scrolling."),
+         "chips. Each answer appears in a chat you can keep scrolling — and follow-ups "
+         "like <i>\"does deleting it take effect immediately?\"</i> understand the "
+         "conversation."),
         ("Read the answer: the <b>[1] [2]</b> markers are citations, and the "
          "<b>Sources</b> expander shows the passages they came from."),
         ("Explore the numbers: <b>Analytics</b> shows how the system is <i>running</i> "
@@ -112,8 +114,9 @@ with tabs[0]:
                     unsafe_allow_html=True)
 
     st.markdown("#### The pages")
-    card(f"{_GC_ASK}Ask", "The chat. Ask grounded questions, adjust how many passages are "
-                          "retrieved (<code>k</code>), upload documents, and re-index the corpus.")
+    card(f"{_GC_ASK}Ask", "The chat. Ask grounded questions and follow-ups, adjust how many "
+                          "passages are retrieved (<code>k</code>), upload documents, and "
+                          "re-index the corpus.")
     card(f"{_GC_CORPUS}Corpus", "Browse exactly what the vector database indexed — every source "
                           "file with its type, size and chunk count, plus a viewer showing the "
                           "extracted text and the individual chunks stored for retrieval.")
@@ -160,7 +163,8 @@ with tabs[1]:
         f'<span class="badge cache">{CACHE_ICON} Cache hit</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="ann"><b>Badges</b> — <b>mode</b> is the retrieval strategy '
                 '(<code>vector</code> or <code>hybrid</code>). <b>Cache hit</b> means this '
-                'exact question was asked before and served instantly from memory at $0.</div>',
+                'exact question was asked before (for a follow-up: after the same '
+                'conversation) and served instantly from memory at $0.</div>',
                 unsafe_allow_html=True)
 
     st.markdown(
@@ -180,6 +184,19 @@ with tabs[1]:
                 'passages) vs <span style="color:var(--seg-gen)">generation</span> (the model '
                 'writing).</div>', unsafe_allow_html=True)
 
+    st.markdown("#### Follow-up questions")
+    st.markdown('<div class="rewrite">↳ searched as: How do I rotate a leaked API key? '
+                'Does deleting it take effect immediately?</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="ann">The chat sends the last few messages with every question. When a '
+        'question leans on them (<i>it</i>, <i>they</i>, <i>what about…</i>), the server first '
+        'rewrites it into a <b>standalone question</b> and searches for <i>that</i> — shown on '
+        'the <b>searched as</b> line, and as a leading '
+        '<span style="color:var(--seg-rw)">rewrite</span> segment in the latency bar. The '
+        'conversation only resolves what you meant; the answer is still grounded in the cited '
+        'passages alone. A self-contained question ignores the history entirely. '
+        '<b>Clear chat</b> starts a fresh conversation.</div>', unsafe_allow_html=True)
+
     st.markdown("#### When the docs don't have the answer")
     st.markdown(
         f'<div class="badges"><span class="badge refuse">{WARN_ICON} Not grounded in the corpus</span></div>',
@@ -195,18 +212,21 @@ with tabs[2]:
     st.markdown("#### The per-query numbers")
     st.caption("Shown on each answer and aggregated on the Analytics page.")
     card("Latency", "Total time to answer, in milliseconds — split into <b>retrieval</b> "
-         "(finding passages) and <b>generation</b> (the model writing). "
+         "(finding passages) and <b>generation</b> (the model writing), plus a short "
+         "<b>rewrite</b> stage for follow-up questions. "
          "<b>p95 latency</b> is the value 95% of queries come in under (a worst-case feel).",
          "lower is better", "down")
     card("Cost (USD)", "Dollar cost of the query — embedding + prompt + completion tokens "
          "priced per model. <b>$0</b> on the <code>fake</code>/<code>hf</code> tiers; real "
          "cents on <code>openai</code>. A cache hit is always $0.", "lower is better", "down")
     card("Tokens", "Units of text the model processed: <b>prompt</b> (the context + your "
-         "question sent in) plus <b>completion</b> (the answer). Tokens drive cost.", "info")
+         "question sent in) plus <b>completion</b> (the answer), plus the <b>rewrite</b> call "
+         "for a follow-up. Tokens drive cost.", "info")
     card("Contexts", "How many passages were retrieved and fed to the model — the "
          "<code>k</code> value. More context can help, but adds tokens and noise.", "info")
-    card("Cache hit", "The question matched a previous one exactly, so the stored answer "
-         "was returned instantly at $0. Cache hits are <i>not</i> traced, so Analytics "
+    card("Cache hit", "The question matched a previous one exactly (a follow-up must also "
+         "follow the same conversation), so the stored answer was returned instantly at $0. "
+         "Cache hits are <i>not</i> traced, so Analytics "
          "reflects real (uncached) work only.", "info")
 
     st.markdown("#### The charts")
@@ -298,7 +318,11 @@ with tabs[4]:
              "default, or Postgres + pgvector for scale.")
         card("Cache", "An in-memory store of recent answers; repeat questions return instantly "
              "at $0 (flagged as a cache hit).")
+        card("Follow-up rewrite", "Turning a question that depends on the chat "
+             "(<i>\"is it free?\"</i>) into one that stands alone, so search knows what "
+             "<i>it</i> means. History only clarifies the question — it is never cited.")
 
 st.divider()
-st.caption("Want the deep-dive? The repo ships a full written study guide at "
-           "`docs/RAG_Study_Guide.pdf`.")
+st.caption("Want the deep-dive? The project README on GitHub "
+           "(github.com/Baron197/rag-knowledge-assistant) covers the architecture, design "
+           "tradeoffs and evaluation results.")
