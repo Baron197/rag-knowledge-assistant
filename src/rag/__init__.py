@@ -12,6 +12,7 @@ Generation (RAG) service. The public sub-modules are:
 - ``prompts``       : the grounded / cited / refusal prompt contract
 - ``llm``           : answer generation providers (OpenAI + keyless fake)
 - ``observability`` : per-query traces (latency / tokens / cost) + aggregation
+- ``conversation``  : follow-up questions -> standalone question (history-aware rewrite)
 - ``pipeline``      : orchestrates retrieve -> prompt -> generate -> trace (+cache)
 - ``ingest``        : load -> chunk -> embed -> store (CLI entry point)
 - ``api``           : FastAPI service exposing the pipeline

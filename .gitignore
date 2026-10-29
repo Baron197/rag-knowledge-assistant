@@ -9,13 +9,18 @@ venv/
 # Data / indexes / traces (generated)
 data/index/
 traces/
-# Eval reports are generated, but keep two representative real-OpenAI runs in git
+# Eval reports are generated, but keep the representative real-OpenAI runs in git
 # so the README's numbers are reproducible artifacts (the Results section links them).
 eval/results/*
 !eval/results/eval-20260705T085510Z.json
 !eval/results/eval-20260705T085510Z.md
 !eval/results/compare-20260708T041312Z.json
 !eval/results/compare-20260708T041312Z.md
+# Real OpenAI runs, vector + hybrid, with the follow-up (chat history) A/B.
+!eval/results/eval-20261029T030407Z.json
+!eval/results/eval-20261029T030407Z.md
+!eval/results/eval-20261029T030606Z.json
+!eval/results/eval-20261029T030606Z.md
 *.npz
 
 # OS / editor / assistant

@@ -174,22 +174,32 @@ The interesting engineering is in the choices, not the line count:
 
 ## Results
 
-The real **OpenAI** run below is committed under [`eval/results/`](eval/results/)
+The real **OpenAI** runs below are committed under [`eval/results/`](eval/results/)
 (alongside the vector-vs-hybrid A/B), so those numbers are reproducible artifacts,
-not just screenshots. The keyless numbers are deterministic — CI reproduces them
-on every run, and that run is the gate.
+not just screenshots — and the Evaluation page shows them as a run history. The
+keyless numbers are deterministic — CI reproduces them on every run, and that run
+is the gate.
 
-**Real OpenAI path** — `llm=openai · embedding=openai · pgvector · hybrid · k=4`
-([`eval-20260705T085510Z.md`](eval/results/eval-20260705T085510Z.md)):
+**Real OpenAI path** — `llm=openai · embedding=openai · k=4`, one run per retrieval
+mode ([vector](eval/results/eval-20261029T030407Z.md) ·
+[hybrid](eval/results/eval-20261029T030606Z.md)):
 
-| Retrieval | | Generation (Ragas) | |
-|---|---|---|---|
-| Context recall@k (answerable) | **1.0** | faithfulness | **0.965** |
-| Recall@1 | 0.957 | answer_relevancy | 0.961 |
-| MRR | 0.978 | context_precision | 0.964 |
-| Refusal accuracy (out-of-scope) | **1.0** | context_recall | 1.0 |
+| | vector | hybrid |
+|---|---|---|
+| Context recall@k (answerable) | **1.0** | **1.0** |
+| Recall@1 | **1.0** | 0.957 |
+| MRR | **1.0** | 0.978 |
+| Refusal accuracy (out-of-scope) | **1.0** | **1.0** |
+| Ragas faithfulness | 0.955 | 0.970 |
+| Ragas answer_relevancy | 0.917 | 0.964 |
+| Ragas context_precision | 0.964 | 0.975 |
+| Ragas context_recall | 1.0 | 1.0 |
 
-Averages: **~$0.00023 / query**, ~1.9 s latency.
+Averages: **~$0.00023 / query**, ~1.5–1.8 s latency. The hybrid run reproduces the
+earlier committed one ([`eval-20260705T085510Z.md`](eval/results/eval-20260705T085510Z.md),
+on pgvector) exactly on retrieval — Recall@1 0.957, MRR 0.978 — while its Ragas
+scores moved by about a hundredth: an LLM judge is noisy at that scale, so don't
+read small Ragas gaps between runs (or modes) as signal.
 
 **Keyless run** (`fake` providers — validates the retrieval / cost / latency
 plumbing end-to-end, offline at $0; this is the run the CI gate enforces):
@@ -216,9 +226,26 @@ heuristic rewrite):
 > The one follow-up still not at rank 1 is *"And can I downgrade from it later?"*:
 > it is rewritten correctly, but the doc says **"Downgrades"** and the keyless
 > keyword-hash embedder has no stemming. That is a retrieval limit of the `fake`
-> tier, not a rewrite failure; semantic embeddings close it. The LLM-rewrite
-> numbers come from `python -m eval.run_eval` on the OpenAI/HF path (not yet
-> committed here).
+> tier, not a rewrite failure; semantic embeddings close it.
+
+And on the real OpenAI runs above, where the **LLM** does the rewrite:
+
+| Metric | vector: without → with history | hybrid: without → with history |
+|---|---|---|
+| Context recall@k | 1.0 → 1.0 | 1.0 → 1.0 |
+| Recall@1 | 0.857 → 0.857 | 0.571 → **0.857** |
+| MRR | 0.905 → **0.929** | 0.786 → **0.929** |
+
+> Semantic embeddings already rank most follow-ups first without any history
+> (vector: 6 of 7), so the gain is smaller than on the keyless tier. It is largest
+> in hybrid mode, where the keyword half has little to match in a pronoun-heavy
+> question such as *"Does deleting it take effect immediately?"* (rank 2 → 1). One
+> question moves the other way: *"What happens if I go over it?"* ranks first
+> without history but second with it. The rewrite is correct (*"…the per-second
+> rate limit on the Growth plan?"*), but carrying *"Growth plan"* pulls the billing
+> doc just above the rate-limits doc, because each short doc here is indexed as a
+> single chunk (the LangChain twin, with smaller chunks, ranks it first). A
+> history-aware rewrite is a net win, not a free one — which is why it is measured.
 
 **Retrieval A/B — vector vs hybrid** on real OpenAI embeddings (`python -m eval.run_eval --compare`
 → [`compare-20260708T041312Z.md`](eval/results/compare-20260708T041312Z.md)):
